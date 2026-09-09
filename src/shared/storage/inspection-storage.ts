@@ -6,6 +6,8 @@ import {
   type InspectionStorageData,
 } from './inspection-storage-schema'
 
+export class InvalidInspectionStorageError extends Error {}
+
 // Injetado para testes. A composição futura poderá passar window.localStorage.
 export function createInspectionStorage(storage: Pick<Storage, 'getItem' | 'setItem'>) {
   function readSnapshot(): InspectionStorageData {
@@ -20,7 +22,7 @@ export function createInspectionStorage(storage: Pick<Storage, 'getItem' | 'setI
       return inspectionStorageSchema.parse(parsed)
     } catch (cause) {
       // Nunca apagar ou substituir silenciosamente dados que não entendemos.
-      throw new Error('Dados de inspeções inválidos ou versão de storage não suportada.', {
+      throw new InvalidInspectionStorageError('Dados de inspeções inválidos ou versão de storage não suportada.', {
         cause,
       })
     }
@@ -29,6 +31,11 @@ export function createInspectionStorage(storage: Pick<Storage, 'getItem' | 'setI
   return {
     async read(): Promise<InspectionStorageData> {
       return readSnapshot()
+    },
+    // Recuperação explícita: substitui somente a chave da aplicação em uma escrita.
+    async reset(inspections: readonly Inspecao[]): Promise<void> {
+      const validated = inspectionStorageSchema.parse({ version: INSPECTION_STORAGE_VERSION, inspections })
+      storage.setItem(INSPECTION_STORAGE_KEY, JSON.stringify(validated))
     },
     async write(inspections: readonly Inspecao[]): Promise<void> {
       const validated = inspectionStorageSchema.parse({

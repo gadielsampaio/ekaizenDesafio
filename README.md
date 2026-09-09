@@ -33,6 +33,7 @@ src/
     review-inspection/         # Consulta somente leitura, decisões e testes
     reopen-inspection/         # Reabertura, ação na consulta e testes
     list-inspections/           # Cards, filtros, contadores, exemplos e testes
+    recover-data/               # Controles de simulação e recuperação confirmada
   shared/
     domain/                    # Tipos, schemas e perguntas fixas
     contracts/                 # InspectionRepository
@@ -56,7 +57,7 @@ Esses schemas validam a estrutura dos dados. A edição e o envio possuem regras
 
 `InspectionRepository` define `list`, `findById`, `create`, `saveDraft`, `submit`, `approve`, `reject` e `reopen`. As mutações retornam `Promise<Inspecao>`; `findById` retorna `null` quando não encontra. A implementação concreta em `app/inspection-repository.ts` disponibiliza `create`, `findById`, `saveDraft`, `submit`, `approve`, `reject`, `reopen` e `list`, implementando todo o contrato `InspectionRepository`. A UI de criação recebe apenas a operação `create`, sem acesso a escrita de snapshots ou localStorage.
 
-`createInspectionStorage(window.localStorage)` fornece `read()` e `write(inspections)`, ambos assíncronos, sem latência artificial. A dependência é recebida por parâmetro para facilitar testes e evitar acesso ao navegador durante a importação do módulo.
+`createInspectionStorage(window.localStorage)` fornece `read()` e `write(inspections)`, ambos assíncronos. O repositório aplica a simulação antes de executar cada operação. A dependência é recebida por parâmetro para facilitar testes e evitar acesso ao navegador durante a importação do módulo.
 
 Chave estável: `ekaizen:inspections`. Envelope inicial:
 
@@ -128,7 +129,18 @@ em_aprovacao → reprovar → reprovada
 reprovada → reabrir → em_preenchimento
 ```
 
-Permanecem pendentes: detalhe completo. O armazenamento corrompido já é rejeitado sem perder dados e a UI mostra erro, mas ainda falta a recuperação explícita com reset confirmado, exigida pelo PDF. Também permanecem pendentes o simulador reproduzível de atraso/falha, a configuração e aferição da cobertura mínima de 80% de linhas e branches das regras/dados, e os entregáveis finais de publicação. As falhas e atrasos deste slice são controlados nos testes, por mocks e Promises, sem simulador na aplicação.
+Permanecem pendentes: detalhe completo. A recuperação explícita e o simulador estão implementados. Permanecem pendentes a configuração e aferição da cobertura mínima de 80% de linhas e branches das regras/dados e os entregáveis finais de publicação.
+
+## Simular atraso, falha e restaurar dados
+
+Abra **Simulação de operações**, disponível em todas as telas. **Atraso por operação** permite escolher 0, 1, 3 ou 5 segundos. **Falhar próxima operação** programa exatamente uma falha: a próxima chamada ao repositório (listar, consultar, criar, salvar, transicionar ou restaurar) aguarda o atraso escolhido e falha antes de acessar os dados. Chamadas subsequentes funcionam normalmente. Configure depois que a tela carregar para testar uma ação específica. Exemplo: abra a edição, escolha 3 segundos, programe a falha e salve. Durante a espera o envio fica bloqueado; após a falha os valores continuam preenchidos. Clique novamente para salvar sem falha.
+
+Configuração e falha programada vivem somente em memória e são limpas ao recarregar. Cada chamada captura sua configuração ao entrar na fila; alterações no controle não afetam chamadas já iniciadas. A fila serializa também consultas e reset. Não há aleatoriedade. Os testes usam relógio falso para verificar atraso sem espera real. O reset fica indisponível enquanto houver operação pendente.
+
+JSON inválido, conteúdo incompatível com o schema ou versão desconhecida produzem erro visível e uma orientação de recuperação, preservando o conteúdo original. **Restaurar dados da aplicação** solicita confirmação explícita, incluindo o descarte de alterações não salvas. Cancelar não escreve nada. Confirmar substitui somente `ekaizen:inspections` pelos seis exemplos originais, com histórico e horários fixos descritos acima; outras chaves permanecem intactas. A escrita é única e validada, sem apagar antes de gravar. Em falha, o conteúdo anterior permanece e o controle permite tentar novamente. Em sucesso, a tela é recarregada internamente para descartar estado antigo; na lista aparecem os seis exemplos, e detalhes de cadastros removidos informam que não foram encontrados.
+
+Para testar corrupção manualmente, nas ferramentas do navegador altere apenas o valor de `ekaizen:inspections` para `{` e recarregue. A aplicação deve exibir o erro e oferecer restauração. Bloqueio de acesso ou quota do navegador também geram erros com nova tentativa, mas não são classificados como conteúdo corrompido. Nenhum reset usa `localStorage.clear()`.
+
 
 ## UI e testes
 

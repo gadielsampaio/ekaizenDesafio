@@ -1,3 +1,6 @@
+import { useState } from 'react'
+import { DataControls } from '@/features/recover-data/data-controls'
+import type { createOperationSimulation } from '@/shared/storage/operation-simulation'
 import { Link, Route, Routes, useLocation } from 'react-router-dom'
 import { Button } from '@/shared/ui/button'
 import type { InspectionRepository } from '@/shared/contracts/inspection-repository'
@@ -6,13 +9,16 @@ import { InspectionPlaceholder } from './inspection-placeholder'
 import { ListInspectionsPage } from '@/features/list-inspections/list-inspections-page'
 import { EditInspectionPage } from '@/features/edit-inspection/edit-inspection-page'
 
-export function App({ repository }: {
+export function App({ repository, dataControls }: {
   repository: InspectionRepository
+  dataControls?: { simulation: ReturnType<typeof createOperationSimulation>; reset: () => Promise<void> }
 }) {
   const location = useLocation()
+  const [revision, setRevision] = useState(0)
   return (
     <main className="mx-auto flex min-h-svh max-w-2xl flex-col justify-center gap-4 px-6 py-12">
-      <Routes>
+      {dataControls && <DataControls {...dataControls} onRecovered={() => setRevision((value) => value + 1)} />}
+      <Routes key={revision}>
         <Route
           path="/"
           element={<ListInspectionsPage repository={repository} />}

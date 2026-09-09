@@ -1,3 +1,4 @@
+import { createOperationSimulation } from '@/shared/storage/operation-simulation'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { createBrowserRouter, RouterProvider } from 'react-router-dom'
@@ -12,11 +13,12 @@ if (!rootElement) {
   throw new Error('Elemento raiz da aplicação não encontrado.')
 }
 
+const simulation = createOperationSimulation()
 const repository = createLocalInspectionRepository(createInspectionStorage({
   getItem: (key) => window.localStorage.getItem(key),
   setItem: (key, value) => window.localStorage.setItem(key, value),
-}))
-const router = createBrowserRouter([{ path: '*', element: <App repository={repository} /> }])
+}), simulation)
+const router = createBrowserRouter([{ path: '*', element: <App repository={repository} dataControls={{ simulation, reset: repository.reset }} /> }])
 
 createRoot(rootElement).render(
   <StrictMode>
