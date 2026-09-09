@@ -2,7 +2,7 @@ import type { Inspecao } from '@/shared/domain/inspection'
 
 export type CreateInspectionInput = Pick<
   Inspecao,
-  'titulo' | 'setor' | 'responsavel' | 'dataInspecao'
+  'titulo' | 'setor' | 'responsavel' | 'dataInspecao' | 'checklist'
 >
 
 export type SaveDraftInput = Pick<
