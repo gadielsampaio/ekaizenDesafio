@@ -1,6 +1,6 @@
 import { ReopenInspectionButton } from '@/features/reopen-inspection/reopen-inspection-button'
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useLocation, useParams } from 'react-router-dom'
 import type { InspectionRepository } from '@/shared/contracts/inspection-repository'
 import type { Inspecao } from '@/shared/domain/inspection'
 import { Button } from '@/shared/ui/button'
@@ -15,6 +15,7 @@ type LoadState =
 export function InspectionPlaceholder({ repository }: {
   repository: Pick<InspectionRepository, 'findById' | 'approve' | 'reject' | 'reopen'>
 }) {
+  const { search } = useLocation()
   const { id = '' } = useParams()
   const [state, setState] = useState<LoadState>({ status: 'loading' })
   const [attempt, setAttempt] = useState(0)
@@ -57,11 +58,11 @@ export function InspectionPlaceholder({ repository }: {
             onReopened={(inspection) => setState({ status: 'loaded', inspection })}
           />}
           {state.inspection.status === 'em_preenchimento' && <Button asChild className="self-start">
-            <Link to={`/inspecoes/${encodeURIComponent(state.inspection.id)}/editar`}>Editar inspeção</Link>
+            <Link to={`/inspecoes/${encodeURIComponent(state.inspection.id)}/editar${search}`}>Editar inspeção</Link>
           </Button>}
         </>
       )}
-      <Button asChild variant="outline" className="self-start"><Link to="/">Voltar ao início</Link></Button>
+      <Button asChild variant="outline" className="self-start"><Link to={`/${search}`}>Voltar ao início</Link></Button>
     </>
   )
 }

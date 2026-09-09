@@ -32,6 +32,7 @@ src/
     edit-inspection/           # Rascunho, validação de envio, transição e testes
     review-inspection/         # Consulta somente leitura, decisões e testes
     reopen-inspection/         # Reabertura, ação na consulta e testes
+    list-inspections/           # Cards, filtros, contadores, exemplos e testes
   shared/
     domain/                    # Tipos, schemas e perguntas fixas
     contracts/                 # InspectionRepository
@@ -53,7 +54,7 @@ Esses schemas validam a estrutura dos dados. A edição e o envio possuem regras
 
 ## Persistência
 
-`InspectionRepository` define `list`, `findById`, `create`, `saveDraft`, `submit`, `approve`, `reject` e `reopen`. As mutações retornam `Promise<Inspecao>`; `findById` retorna `null` quando não encontra. A implementação concreta em `app/inspection-repository.ts` disponibiliza `create`, `findById`, `saveDraft`, `submit`, `approve`, `reject` e `reopen`, tipadas como um subconjunto de `InspectionRepository`. As outras operações não possuem implementação ou stubs. A UI de criação recebe apenas a operação `create`, sem acesso a escrita de snapshots ou localStorage.
+`InspectionRepository` define `list`, `findById`, `create`, `saveDraft`, `submit`, `approve`, `reject` e `reopen`. As mutações retornam `Promise<Inspecao>`; `findById` retorna `null` quando não encontra. A implementação concreta em `app/inspection-repository.ts` disponibiliza `create`, `findById`, `saveDraft`, `submit`, `approve`, `reject`, `reopen` e `list`, implementando todo o contrato `InspectionRepository`. A UI de criação recebe apenas a operação `create`, sem acesso a escrita de snapshots ou localStorage.
 
 `createInspectionStorage(window.localStorage)` fornece `read()` e `write(inspections)`, ambos assíncronos, sem latência artificial. A dependência é recebida por parâmetro para facilitar testes e evitar acesso ao navegador durante a importação do módulo.
 
@@ -108,6 +109,14 @@ A camada de dados aceita decisões apenas em `em_aprovacao`. Cada decisão grava
 
 A consulta oferece **Reabrir para correção** somente para inspeções reprovadas. A camada de dados verifica esse estado, preserva os campos, checklist e histórico anterior e grava `em_preenchimento`, `atualizadoEm` e um único evento `reabertura`. A fila existente impede reaberturas repetidas. Após sucesso, a consulta reflete imediatamente o retorno persistido e oferece acesso à edição. Durante o processamento, o botão fica bloqueado; em falha, o estado confirmado permanece igual e é possível tentar novamente.
 
+## Listar inspeções
+
+A página inicial lista cards por `criadoEm` decrescente, com desempate pelo ID. Busca parcial por título/protocolo ignora maiúsculas. Busca, setor e status se combinam por interseção; os contadores aplicam somente busca e setor, antes do status. Chips e seletor de status controlam o mesmo filtro. A URL guarda os filtros durante consulta, edição e retorno; ao voltar, uma nova leitura atualiza cards e contadores. Há carregamento, erro com nova tentativa, nenhum resultado e limpeza dos filtros.
+
+Na primeira listagem, os seis exemplos da seção 6 do PDF são acrescentados em uma única escrita validada. IDs estáveis `exemplo-1` a `exemplo-6` evitam duplicação e preservam mudanças posteriores. Bases já existentes são mantidas; apenas exemplos ausentes são adicionados, com protocolos livres. Não há exclusão nesta etapa. A inicialização compartilha a fila das mutações; falha não grava seed parcial e permite nova tentativa. Não há sincronização entre abas.
+
+Todos os exemplos usam data da inspeção 08/09/2026. Horários fixos em UTC, nessa mesma data: criação às 08:00 (Transportador), 09:00 (Furadeira), 10:00 (Prensa), 11:00 (Paleteira), 12:00 (Esmeril) e 13:00 (Empilhadeira). Quando aplicável, envio ocorre dez minutos após a criação e decisão vinte minutos após. `atualizadoEm` corresponde ao último evento. Respostas, observações e motivo de reprovação reproduzem o PDF. Os testes verificam seed, recarga, colisões, filtros, contadores e atualização após ações.
+
 ## Próximas etapas
 
 Implementar as demais capacidades com funções testáveis que validem a ação antes de persistir alterações ou acrescentar eventos. O fluxo definido é:
@@ -119,7 +128,7 @@ em_aprovacao → reprovar → reprovada
 reprovada → reabrir → em_preenchimento
 ```
 
-Permanecem pendentes: listagem/filtros/contadores, detalhe completo e os seis exemplos iniciais. O armazenamento corrompido já é rejeitado sem perder dados e a UI mostra erro, mas ainda falta a recuperação explícita com reset confirmado, exigida pelo PDF. Também permanecem pendentes o simulador reproduzível de atraso/falha, a configuração e aferição da cobertura mínima de 80% de linhas e branches das regras/dados, e os entregáveis finais de publicação. As falhas e atrasos deste slice são controlados nos testes, por mocks e Promises, sem simulador na aplicação.
+Permanecem pendentes: detalhe completo. O armazenamento corrompido já é rejeitado sem perder dados e a UI mostra erro, mas ainda falta a recuperação explícita com reset confirmado, exigida pelo PDF. Também permanecem pendentes o simulador reproduzível de atraso/falha, a configuração e aferição da cobertura mínima de 80% de linhas e branches das regras/dados, e os entregáveis finais de publicação. As falhas e atrasos deste slice são controlados nos testes, por mocks e Promises, sem simulador na aplicação.
 
 ## UI e testes
 

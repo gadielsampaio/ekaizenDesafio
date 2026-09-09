@@ -2,23 +2,31 @@ import { reopenInspection } from '@/features/reopen-inspection/reopen-inspection
 import { createInspection } from '@/features/create-inspection/create-inspection'
 import { saveInspectionDraft, submitInspection } from '@/features/edit-inspection/edit-inspection'
 import { approveInspection, rejectInspection } from '@/features/review-inspection/review-inspection'
-import type { Inspecao } from '@/shared/domain/inspection'
+import { addMissingExamples } from '@/features/list-inspections/inspection-examples'
 import type { InspectionRepository } from '@/shared/contracts/inspection-repository'
 import type { createInspectionStorage } from '@/shared/storage/inspection-storage'
 
 // A composição conecta o slice ao storage. Operações futuras não ganham stubs.
 export function createLocalInspectionRepository(
   storage: ReturnType<typeof createInspectionStorage>,
-): Pick<InspectionRepository, 'create' | 'findById' | 'saveDraft' | 'submit' | 'approve' | 'reject' | 'reopen'> {
+): InspectionRepository {
   let pending = Promise.resolve()
 
-  function enqueueMutation(action: () => Promise<Inspecao>) {
+  function enqueueMutation<T>(action: () => Promise<T>) {
     const operation = pending.then(action)
     pending = operation.then(() => undefined, () => undefined)
     return operation
   }
 
   return {
+    list() {
+      return enqueueMutation(async () => {
+        const { inspections } = await storage.read()
+        const initialized = addMissingExamples(inspections)
+        if (initialized.length !== inspections.length) await storage.write(initialized)
+        return initialized
+      })
+    },
     create(input) {
       return enqueueMutation(() => createInspection(storage, input))
     },

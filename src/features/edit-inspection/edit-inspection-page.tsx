@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, useBeforeUnload, useBlocker, useNavigate, useParams } from 'react-router-dom'
+import { Link, useLocation, useBeforeUnload, useBlocker, useNavigate, useParams } from 'react-router-dom'
 import type { InspectionRepository } from '@/shared/contracts/inspection-repository'
 import type { Inspecao } from '@/shared/domain/inspection'
 import { getInspectionFormErrors, type InspectionFormErrors, type InspectionFormValues } from '@/shared/lib/inspection-form'
@@ -11,6 +11,7 @@ type Repository = Pick<InspectionRepository, 'findById' | 'saveDraft' | 'submit'
 type LoadState = { status: 'loading' } | { status: 'error' } | { status: 'loaded'; inspection: Inspecao | null }
 
 export function EditInspectionPage({ repository }: { repository: Repository }) {
+  const { search } = useLocation()
   const { id = '' } = useParams()
   const [state, setState] = useState<LoadState>({ status: 'loading' })
   const [attempt, setAttempt] = useState(0)
@@ -36,7 +37,7 @@ export function EditInspectionPage({ repository }: { repository: Repository }) {
     return <>
       <h1 className="text-2xl font-semibold">Edição indisponível</h1>
       <p>Somente inspeções em preenchimento podem ser alteradas ou enviadas.</p>
-      <Link className="underline" to={`/inspecoes/${encodeURIComponent(id)}`}>Voltar à inspeção</Link>
+      <Link className="underline" to={`/inspecoes/${encodeURIComponent(id)}${search}`}>Voltar à inspeção</Link>
     </>
   }
   return <EditInspectionForm inspection={state.inspection} repository={repository} />
@@ -49,6 +50,7 @@ function editableFields(inspection: Inspecao): InspectionFormValues {
 
 function EditInspectionForm({ inspection, repository }: { inspection: Inspecao; repository: Repository }) {
   const navigate = useNavigate()
+  const { search } = useLocation()
   const [confirmed, setConfirmed] = useState(inspection)
   const [values, setValues] = useState(() => editableFields(inspection))
   const [errors, setErrors] = useState<InspectionFormErrors>({})
@@ -93,7 +95,7 @@ function EditInspectionForm({ inspection, repository }: { inspection: Inspecao; 
       setValues(editableFields(updated))
       if (action === 'submit') {
         submitted.current = true
-        await navigate(`/inspecoes/${encodeURIComponent(updated.id)}`)
+        await navigate(`/inspecoes/${encodeURIComponent(updated.id)}${search}`)
       } else {
         setSuccess(true)
       }
@@ -126,7 +128,7 @@ function EditInspectionForm({ inspection, repository }: { inspection: Inspecao; 
         <Button type="button" disabled={pending !== null} onClick={() => { void persist('submit') }}>
           {pending === 'submit' ? 'Enviando…' : 'Enviar para aprovação'}
         </Button>
-        <Button type="button" variant="outline" disabled={pending !== null} onClick={() => navigate(`/inspecoes/${encodeURIComponent(inspection.id)}`)}>Cancelar</Button>
+        <Button type="button" variant="outline" disabled={pending !== null} onClick={() => navigate(`/inspecoes/${encodeURIComponent(inspection.id)}${search}`)}>Cancelar</Button>
       </div>
     </form>
   </>

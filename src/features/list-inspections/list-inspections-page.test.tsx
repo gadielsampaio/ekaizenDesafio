@@ -1,0 +1,78 @@
+import { render, screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { createMemoryRouter, RouterProvider } from 'react-router-dom'
+import { describe, expect, it, vi } from 'vitest'
+import { App } from '@/app/app'
+import { createLocalInspectionRepository } from '@/app/inspection-repository'
+import { createInspectionStorage } from '@/shared/storage/inspection-storage'
+
+function setup(path = '/') {
+  const repository = createLocalInspectionRepository(createInspectionStorage(localStorage))
+  const router = createMemoryRouter([{ path: '*', element: <App repository={repository} /> }], { initialEntries: [path] })
+  render(<RouterProvider router={router} />)
+  return { repository, router, user: userEvent.setup() }
+}
+
+describe('listagem na interface', () => {
+  it('exibe cards completos, combina filtros e limpa o estado vazio', async () => {
+    const { user } = setup()
+    const link = await screen.findByRole('link', { name: 'Transportador 01' })
+    const card = link.closest('li')
+    if (!card) throw new Error('Card ausente')
+    expect(within(card).getByText('INS-000001')).toBeInTheDocument()
+    expect(within(card).getByText('Produção · Equipe A')).toBeInTheDocument()
+    expect(within(card).getByText('08/09/2026')).toBeInTheDocument()
+    expect(within(card).getByText('Status: Em preenchimento')).toBeInTheDocument()
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Setor' }), 'Produção')
+    await user.click(screen.getByRole('button', { name: 'Aprovadas (1)' }))
+    expect(screen.getByRole('button', { name: 'Todas (2)' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Em preenchimento (1)' })).toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: 'Status' })).toHaveValue('aprovada')
+    expect(screen.queryByRole('link', { name: 'Transportador 01' })).not.toBeInTheDocument()
+    await user.type(screen.getByRole('searchbox'), 'inexistente')
+    expect(screen.getByText('Nenhuma inspeção encontrada.')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Limpar filtros' }))
+    expect(screen.getByRole('button', { name: 'Todas (6)' })).toBeInTheDocument()
+    expect(screen.getByRole('searchbox')).toHaveValue('')
+    expect(screen.getByRole('combobox', { name: 'Setor' })).toHaveValue('')
+  })
+
+  it('preserva filtros no detalhe e atualiza cards e contadores após aprovação', async () => {
+    const { user, router } = setup('/?busca=fur&setor=Manuten%C3%A7%C3%A3o&status=em_aprovacao')
+    await user.click(await screen.findByRole('link', { name: 'Furadeira 02' }))
+    await user.click(await screen.findByRole('button', { name: 'Aprovar' }))
+    await screen.findByText('Status: Aprovada')
+    await user.click(screen.getByRole('link', { name: 'Voltar ao início' }))
+    expect(await screen.findByText('Nenhuma inspeção encontrada.')).toBeInTheDocument()
+    expect(screen.getByRole('searchbox')).toHaveValue('fur')
+    expect(screen.getByRole('combobox', { name: 'Setor' })).toHaveValue('Manutenção')
+    expect(screen.getByRole('combobox', { name: 'Status' })).toHaveValue('em_aprovacao')
+    expect(screen.getByRole('button', { name: 'Em aprovação (0)' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Aprovadas (1)' }))
+    expect(screen.getByRole('link', { name: 'Furadeira 02' })).toBeInTheDocument()
+    expect(router.state.location.search).toContain('busca=fur')
+  })
+
+  it('preserva filtros ao editar e enviar uma inspeção', async () => {
+    const { user } = setup('/?setor=Produ%C3%A7%C3%A3o&status=em_preenchimento')
+    await user.click(await screen.findByRole('link', { name: 'Transportador 01' }))
+    await user.click(await screen.findByRole('link', { name: 'Editar inspeção' }))
+    await screen.findByRole('heading', { name: 'Editar inspeção' })
+    for (const radio of screen.getAllByRole('radio', { name: 'Sim' })) await user.click(radio)
+    await user.click(screen.getByRole('button', { name: 'Enviar para aprovação' }))
+    await screen.findByText('Status: Em aprovação')
+    await user.click(screen.getByRole('link', { name: 'Voltar ao início' }))
+    expect(await screen.findByText('Nenhuma inspeção encontrada.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Em aprovação (1)' })).toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: 'Setor' })).toHaveValue('Produção')
+  })
+
+  it('mostra carregamento e permite tentar novamente após falha', async () => {
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementationOnce(() => { throw new Error('Sem espaço') })
+    const { user } = setup()
+    expect(screen.getByText('Carregando inspeções…')).toBeInTheDocument()
+    expect(await screen.findByRole('alert')).toHaveTextContent('Não foi possível listar')
+    await user.click(screen.getByRole('button', { name: 'Tentar novamente' }))
+    expect(await screen.findByRole('button', { name: 'Todas (6)' })).toBeInTheDocument()
+  })
+})
