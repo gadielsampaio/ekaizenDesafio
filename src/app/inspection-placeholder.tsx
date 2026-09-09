@@ -1,3 +1,4 @@
+import { ReopenInspectionButton } from '@/features/reopen-inspection/reopen-inspection-button'
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import type { InspectionRepository } from '@/shared/contracts/inspection-repository'
@@ -12,7 +13,7 @@ type LoadState =
 
 // Confirma a persistência pela consulta; não é o slice de detalhe.
 export function InspectionPlaceholder({ repository }: {
-  repository: Pick<InspectionRepository, 'findById' | 'approve' | 'reject'>
+  repository: Pick<InspectionRepository, 'findById' | 'approve' | 'reject' | 'reopen'>
 }) {
   const { id = '' } = useParams()
   const [state, setState] = useState<LoadState>({ status: 'loading' })
@@ -50,6 +51,10 @@ export function InspectionPlaceholder({ repository }: {
           {state.inspection.status !== 'em_preenchimento' && <ReviewInspectionPanel
             inspection={state.inspection} repository={repository}
             onReviewed={(inspection) => setState({ status: 'loaded', inspection })}
+          />}
+          {state.inspection.status === 'reprovada' && <ReopenInspectionButton
+            inspection={state.inspection} repository={repository}
+            onReopened={(inspection) => setState({ status: 'loaded', inspection })}
           />}
           {state.inspection.status === 'em_preenchimento' && <Button asChild className="self-start">
             <Link to={`/inspecoes/${encodeURIComponent(state.inspection.id)}/editar`}>Editar inspeção</Link>

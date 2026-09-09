@@ -1,3 +1,4 @@
+import { reopenInspection } from '@/features/reopen-inspection/reopen-inspection'
 import { createInspection } from '@/features/create-inspection/create-inspection'
 import { saveInspectionDraft, submitInspection } from '@/features/edit-inspection/edit-inspection'
 import { approveInspection, rejectInspection } from '@/features/review-inspection/review-inspection'
@@ -8,7 +9,7 @@ import type { createInspectionStorage } from '@/shared/storage/inspection-storag
 // A composição conecta o slice ao storage. Operações futuras não ganham stubs.
 export function createLocalInspectionRepository(
   storage: ReturnType<typeof createInspectionStorage>,
-): Pick<InspectionRepository, 'create' | 'findById' | 'saveDraft' | 'submit' | 'approve' | 'reject'> {
+): Pick<InspectionRepository, 'create' | 'findById' | 'saveDraft' | 'submit' | 'approve' | 'reject' | 'reopen'> {
   let pending = Promise.resolve()
 
   function enqueueMutation(action: () => Promise<Inspecao>) {
@@ -32,6 +33,9 @@ export function createLocalInspectionRepository(
     },
     reject(id, motivo) {
       return enqueueMutation(() => rejectInspection(storage, id, motivo))
+    },
+    reopen(id) {
+      return enqueueMutation(() => reopenInspection(storage, id))
     },
     async findById(id) {
       const { inspections } = await storage.read()

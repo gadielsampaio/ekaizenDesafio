@@ -6,7 +6,7 @@ import { InspectionPlaceholder } from './inspection-placeholder'
 import { EditInspectionPage } from '@/features/edit-inspection/edit-inspection-page'
 
 export function App({ repository }: {
-  repository: Pick<InspectionRepository, 'create' | 'findById' | 'saveDraft' | 'submit' | 'approve' | 'reject'>
+  repository: Pick<InspectionRepository, 'create' | 'findById' | 'saveDraft' | 'submit' | 'approve' | 'reject' | 'reopen'>
 }) {
   const location = useLocation()
   return (
