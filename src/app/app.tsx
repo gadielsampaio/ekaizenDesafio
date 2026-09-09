@@ -3,9 +3,10 @@ import { Button } from '@/shared/ui/button'
 import type { InspectionRepository } from '@/shared/contracts/inspection-repository'
 import { CreateInspectionPage } from '@/features/create-inspection/create-inspection-page'
 import { InspectionPlaceholder } from './inspection-placeholder'
+import { EditInspectionPage } from '@/features/edit-inspection/edit-inspection-page'
 
 export function App({ repository }: {
-  repository: Pick<InspectionRepository, 'create' | 'findById'>
+  repository: Pick<InspectionRepository, 'create' | 'findById' | 'saveDraft' | 'submit'>
 }) {
   const location = useLocation()
   return (
@@ -24,6 +25,7 @@ export function App({ repository }: {
           }
         />
         <Route path="/inspecoes/nova" element={<CreateInspectionPage repository={repository} />} />
+        <Route path="/inspecoes/:id/editar" element={<EditInspectionPage key={location.pathname} repository={repository} />} />
         <Route path="/inspecoes/:id" element={<InspectionPlaceholder key={location.pathname} repository={repository} />} />
         <Route
           path="*"

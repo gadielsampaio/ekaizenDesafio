@@ -43,7 +43,13 @@ export function InspectionPlaceholder({ repository }: {
     <>
       <h1 className="text-2xl font-semibold">{state.inspection ? 'Inspeção encontrada' : 'Inspeção não encontrada'}</h1>
       {state.inspection && (
-        <p className="break-words">{state.inspection.protocolo} — {state.inspection.titulo}</p>
+        <>
+          <p className="break-words">{state.inspection.protocolo} — {state.inspection.titulo}</p>
+          <p>Status: {{ em_preenchimento: 'Em preenchimento', em_aprovacao: 'Em aprovação', aprovada: 'Aprovada', reprovada: 'Reprovada' }[state.inspection.status]}</p>
+          {state.inspection.status === 'em_preenchimento' && <Button asChild className="self-start">
+            <Link to={`/inspecoes/${encodeURIComponent(state.inspection.id)}/editar`}>Editar inspeção</Link>
+          </Button>}
+        </>
       )}
       <Button asChild variant="outline" className="self-start"><Link to="/">Voltar ao início</Link></Button>
     </>

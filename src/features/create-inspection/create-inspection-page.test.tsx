@@ -11,7 +11,8 @@ import { createInspectionStorage } from '@/shared/storage/inspection-storage'
 import { createInspectionFixture } from '@/test/fixtures/inspection'
 
 function renderCreation(repository: Pick<InspectionRepository, 'create' | 'findById'>) {
-  const router = createMemoryRouter([{ path: '*', element: <App repository={repository} /> }], {
+  const appRepository = { ...createLocalInspectionRepository(createInspectionStorage(localStorage)), ...repository }
+  const router = createMemoryRouter([{ path: '*', element: <App repository={appRepository} /> }], {
     initialEntries: ['/', '/inspecoes/nova'],
   })
   const view = render(<RouterProvider router={router} />)
@@ -26,6 +27,16 @@ async function fillForm(user: ReturnType<typeof userEvent.setup>, titulo = 'Tran
 }
 
 describe('formulário de criação', () => {
+  it('permite o primeiro salvamento com Não e observação vazia', async () => {
+    const repository = createLocalInspectionRepository(createInspectionStorage(localStorage))
+    const { user } = renderCreation(repository)
+    await fillForm(user)
+    await user.click(within(screen.getByRole('group', { name: CHECKLIST_PERGUNTAS.avarias })).getByLabelText('Não'))
+    await user.click(screen.getByRole('button', { name: 'Salvar inspeção' }))
+    expect(await screen.findByRole('heading', { name: 'Inspeção encontrada' })).toBeInTheDocument()
+    expect((await repository.findById('inspecao-1'))?.checklist.avarias).toEqual({ resposta: 'nao', observacao: '' })
+  })
+
   it('inicia sem respostas, salva um checklist parcial e o preserva após recarga', async () => {
     const storage = createInspectionStorage(localStorage)
     const { user, router, unmount } = renderCreation(createLocalInspectionRepository(storage))

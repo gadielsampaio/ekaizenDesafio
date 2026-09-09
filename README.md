@@ -1,6 +1,6 @@
 # Sistema de inspeções
 
-Desafio técnico de Frontend Pleno, implementado por capacidades. Além da fundação, está disponível a criação de inspeções em `/inspecoes/nova`, com persistência local e um placeholder de consulta em `/inspecoes/:id`.
+Desafio técnico de Frontend Pleno, implementado por capacidades. Estão disponíveis criação em `/inspecoes/nova`, edição e envio em `/inspecoes/:id/editar`, com persistência local e um placeholder de consulta em `/inspecoes/:id`.
 
 ## Executar
 
@@ -29,12 +29,13 @@ src/
   app/                         # Composição do repositório, rotas, placeholder e CSS
   features/
     create-inspection/         # Formulário, schema de entrada, criação e testes
+    edit-inspection/           # Rascunho, validação de envio, transição e testes
   shared/
     domain/                    # Tipos, schemas e perguntas fixas
     contracts/                 # InspectionRepository
     storage/                   # Envelope v1 e acesso assíncrono ao storage
-    ui/                        # Componentes locais do shadcn/ui
-    lib/                       # cn, utilitário compartilhado pelos componentes
+    ui/                        # shadcn/ui e campos usados por criação e edição
+    lib/                       # cn, tipos do formulário e mensagens de validação
   test/                        # Setup e fixtures reutilizáveis
 ```
 
@@ -46,11 +47,11 @@ As pastas de capacidades são criadas somente quando implementadas, mantendo jun
 
 Os schemas validam enums, campos obrigatórios, datas ISO (`YYYY-MM-DD`) e timestamps ISO com fuso. Objetos são estritos: campos extras são rejeitados. O checklist exige exatamente `identificacao`, `avarias` e `protecoes`; cada resposta aceita `sim`, `nao` ou `null` e uma observação textual. As perguntas vivem apenas em `CHECKLIST_PERGUNTAS`, fora das inspeções persistidas. `criarChecklistVazio()` retorna objetos independentes para cada inspeção.
 
-Esses schemas validam a estrutura dos dados. As regras de transição e a consistência entre ações e histórico serão implementadas nas próximas etapas, fora da UI. A existência de um status válido no schema não autoriza uma transição.
+Esses schemas validam a estrutura dos dados. A edição e o envio possuem regras específicas no slice, fora da UI; revisão e reabertura permanecem para outras etapas. A existência de um status válido no schema não autoriza uma transição.
 
 ## Persistência
 
-`InspectionRepository` define `list`, `findById`, `create`, `saveDraft`, `submit`, `approve`, `reject` e `reopen`. As mutações retornam `Promise<Inspecao>`; `findById` retorna `null` quando não encontra. A implementação concreta em `app/inspection-repository.ts` disponibiliza somente `create` e `findById`, tipadas com `Pick<InspectionRepository, 'create' | 'findById'>`. As outras operações não possuem implementação ou stubs. A UI de criação recebe apenas a operação `create`, sem acesso a escrita de snapshots ou localStorage.
+`InspectionRepository` define `list`, `findById`, `create`, `saveDraft`, `submit`, `approve`, `reject` e `reopen`. As mutações retornam `Promise<Inspecao>`; `findById` retorna `null` quando não encontra. A implementação concreta em `app/inspection-repository.ts` disponibiliza `create`, `findById`, `saveDraft` e `submit`, tipadas com `Pick<InspectionRepository, 'create' | 'findById' | 'saveDraft' | 'submit'>`. As outras operações não possuem implementação ou stubs. A UI de criação recebe apenas a operação `create`, sem acesso a escrita de snapshots ou localStorage.
 
 `createInspectionStorage(window.localStorage)` fornece `read()` e `write(inspections)`, ambos assíncronos, sem latência artificial. A dependência é recebida por parâmetro para facilitar testes e evitar acesso ao navegador durante a importação do módulo.
 
@@ -75,13 +76,23 @@ Não há migrações porque existe apenas a versão 1. Uma versão futura exigir
 
 Na página inicial, use **Nova inspeção**. Preencha título, setor, responsável e data; clique em **Salvar inspeção**. O título é validado após trim (3 a 80 caracteres). Setores e responsáveis vêm dos enums de domínio. A data deve existir no calendário, sem restrição de passado ou futuro. O formulário mantém strings potencialmente incompletas e valida com um schema derivado do domínio; não usa `Inspecao` como estado.
 
-A função de criação valida novamente os dados recebidos e o objeto final antes de gravar. Ela gera status `em_preenchimento`, checklist com respostas `null` e observações vazias, um único evento `criacao` e timestamps iguais para criação, atualização e evento. O relógio utilizado é o do navegador.
+A função de criação valida novamente os dados recebidos e o objeto final antes de gravar. O formulário inicia o checklist com respostas `null` e observações vazias e permite respondê-lo parcialmente, incluindo Não com observação ainda inválida. A criação persiste esse checklist, gera status `em_preenchimento`, um único evento `criacao` e timestamps iguais para criação, atualização e evento. O relógio utilizado é o do navegador.
 
 IDs seguem `inspecao-N` e protocolos `INS-N`, com pelo menos seis dígitos no protocolo. A sequência começa na quantidade armazenada mais um e avança enquanto qualquer um dos identificadores colidir. A garantia de unicidade é relativa aos dados armazenados; não depende de aleatoriedade. Chamadas de criação na mesma instância do repositório são serializadas para evitar perda de dados e colisões. Essa instância é criada uma única vez na composição da aplicação. Não há sincronização entre abas ou instâncias independentes.
 
-Durante a gravação, o formulário e o botão ficam desabilitados e uma trava síncrona impede submits repetidos. Em falha, todos os valores permanecem no formulário, sem navegação ou anúncio de sucesso; o usuário pode tentar salvar novamente. Em sucesso, a rota de destino consulta a inspeção persistida por id e mostra somente protocolo e título. Essa consulta também funciona ao recarregar a página, e possui estados de carregamento, não encontrado e erro com nova tentativa.
+Durante a gravação, o formulário e o botão ficam desabilitados e uma trava síncrona impede submits repetidos. Em falha, todos os valores permanecem no formulário, sem navegação ou anúncio de sucesso; o usuário pode tentar salvar novamente. Em sucesso, a rota de destino consulta a inspeção persistida por id e mostra protocolo, título, status e acesso à edição quando em preenchimento. Essa consulta também funciona ao recarregar a página, e possui estados de carregamento, não encontrado e erro com nova tentativa.
 
 A saída com dados não salvos exige confirmação. O React Router usa `createBrowserRouter` para suportar [bloqueio de navegação](https://reactrouter.com/api/hooks/useBlocker); recarga e fechamento da aba usam `beforeunload`. Durante a gravação, a navegação interna é bloqueada. O formulário usa o `Button` local do shadcn/ui e controles nativos com labels, mensagens associadas, foco visível e ordem de teclado. A largura foi conferida em 390 px e desktop.
+
+## Editar e enviar para aprovação
+
+Acesse **Editar inspeção** no placeholder. Somente inspeções `em_preenchimento` podem ser editadas ou enviadas, com verificação também na camada de dados. O rascunho aceita checklist incompleto e observações de Não ainda inválidas, preserva identidade e histórico, e atualiza `atualizadoEm` sem criar evento de edição.
+
+**Enviar para aprovação** valida os campos obrigatórios, todas as respostas e cada observação de Não após trim (10–300 caracteres). Observações de respostas Sim não são ressalvas ativas: ficam ocultas, não são exigidas nem validadas para envio, e o texto anterior é preservado caso a resposta volte a Não.
+
+`submit(id)` envia o rascunho persistido; `submit(id, input)` permite enviar os campos atuais sem precisar salvá-los antes. A UI usa a segunda forma. A operação faz uma única escrita com os dados, status `em_aprovacao`, `atualizadoEm` e um evento `envio`. Falhas de validação ou gravação não mudam o snapshot confirmado. Mutações compartilham a mesma fila para impedir que envios repetidos dupliquem eventos ou que um rascunho concorrente reverta o envio.
+
+Durante a operação, os campos e botões ficam desabilitados. Falhas preservam todos os valores digitados e permitem tentar novamente. Salvar mantém a edição aberta; enviar navega para o placeholder, que consulta o estado persistido. Sair com alterações não salvas exige confirmação. Os campos de criação e edição são compartilhados, mantendo as regras e operações em seus slices.
 
 ## Próximas etapas
 
@@ -94,7 +105,7 @@ em_aprovacao → reprovar → reprovada
 reprovada → reabrir → em_preenchimento
 ```
 
-Permanecem fora deste slice: salvar rascunho, preencher checklist, transições, listagem/filtros/contadores, detalhe completo e os seis exemplos iniciais. O armazenamento corrompido já é rejeitado sem perder dados e a UI mostra erro, mas ainda falta a recuperação explícita com reset confirmado, exigida pelo PDF. Também permanecem pendentes o simulador reproduzível de atraso/falha, a configuração e aferição da cobertura mínima de 80% de linhas e branches das regras/dados, e os entregáveis finais de publicação. As falhas e atrasos deste slice são controlados nos testes, por mocks e Promises, sem simulador na aplicação.
+Permanecem pendentes: revisão/aprovação/reprovação, reabertura, listagem/filtros/contadores, detalhe completo e os seis exemplos iniciais. O armazenamento corrompido já é rejeitado sem perder dados e a UI mostra erro, mas ainda falta a recuperação explícita com reset confirmado, exigida pelo PDF. Também permanecem pendentes o simulador reproduzível de atraso/falha, a configuração e aferição da cobertura mínima de 80% de linhas e branches das regras/dados, e os entregáveis finais de publicação. As falhas e atrasos deste slice são controlados nos testes, por mocks e Promises, sem simulador na aplicação.
 
 ## UI e testes
 
@@ -106,4 +117,4 @@ npx shadcn@latest add input
 
 Referências da configuração: [shadcn/ui com Vite](https://ui.shadcn.com/docs/installation/vite), [Tailwind com Vite](https://tailwindcss.com/docs/installation/using-vite) e [Vitest](https://vitest.dev/guide/).
 
-Os testes ficam próximos ao código. A suíte cobre schemas, checklist, leitura e escrita no localStorage do jsdom, corrupção, versões incompatíveis, falhas de acesso e quota, preservação de dados e histórico em escrita inválida e navegação com React Testing Library + user-event. Os testes do slice também cobrem cadastro válido, entradas inválidas, estado inicial, histórico único, persistência após recarga, colisões e chamadas concorrentes, envio repetido, erros associados aos campos, ordem de foco, descarte confirmado e nova tentativa após falha. Ainda não testa transições de status, pois essas ações pertencem às próximas etapas. Não há percentual de cobertura aferido nesta etapa.
+Os testes ficam próximos ao código. A suíte cobre schemas, checklist, leitura e escrita no localStorage do jsdom, corrupção, versões incompatíveis, falhas de acesso e quota, preservação de dados e histórico em escrita inválida e navegação com React Testing Library + user-event. Os testes do slice também cobrem cadastro válido, entradas inválidas, estado inicial, histórico único, persistência após recarga, colisões e chamadas concorrentes, envio repetido, erros associados aos campos, ordem de foco, descarte confirmado e nova tentativa após falha. Os testes de edição cobrem rascunhos incompletos, envio atômico, limites das observações, bloqueio por estado, concorrência, falhas sem perda de dados e comportamento do formulário. Revisão e reabertura ainda não estão implementadas. Não há percentual de cobertura aferido nesta etapa.

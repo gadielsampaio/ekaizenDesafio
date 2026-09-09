@@ -44,6 +44,16 @@ describe('estrutura inicial da aplicação', () => {
     expect(await screen.findByRole('heading', { name: 'Inspeção não encontrada' })).toBeInTheDocument()
   })
 
+  it('abre a edição a partir da inspeção encontrada', async () => {
+    const original = createInspectionFixture()
+    await createInspectionStorage(localStorage).write([original])
+    const user = userEvent.setup()
+    const { router } = renderApp(`/inspecoes/${original.id}`)
+    await user.click(await screen.findByRole('link', { name: 'Editar inspeção' }))
+    expect(await screen.findByRole('heading', { name: 'Editar inspeção' })).toBeInTheDocument()
+    expect(router.state.location.pathname).toBe(`/inspecoes/${original.id}/editar`)
+  })
+
   it('mostra erro de consulta e permite tentar novamente', async () => {
     localStorage.setItem('ekaizen:inspections', '{')
     const user = userEvent.setup()

@@ -1,0 +1,133 @@
+import { useEffect, useRef, useState } from 'react'
+import { Link, useBeforeUnload, useBlocker, useNavigate, useParams } from 'react-router-dom'
+import type { InspectionRepository } from '@/shared/contracts/inspection-repository'
+import type { Inspecao } from '@/shared/domain/inspection'
+import { getInspectionFormErrors, type InspectionFormErrors, type InspectionFormValues } from '@/shared/lib/inspection-form'
+import { Button } from '@/shared/ui/button'
+import { InspectionFields } from '@/shared/ui/inspection-fields'
+import { saveDraftSchema, submitInspectionSchema } from './edit-inspection-schema'
+
+type Repository = Pick<InspectionRepository, 'findById' | 'saveDraft' | 'submit'>
+type LoadState = { status: 'loading' } | { status: 'error' } | { status: 'loaded'; inspection: Inspecao | null }
+
+export function EditInspectionPage({ repository }: { repository: Repository }) {
+  const { id = '' } = useParams()
+  const [state, setState] = useState<LoadState>({ status: 'loading' })
+  const [attempt, setAttempt] = useState(0)
+
+  useEffect(() => {
+    let active = true
+    repository.findById(id).then(
+      (inspection) => { if (active) setState({ status: 'loaded', inspection }) },
+      () => { if (active) setState({ status: 'error' }) },
+    )
+    return () => { active = false }
+  }, [id, repository, attempt])
+
+  if (state.status === 'loading') return <p role="status">Carregando inspeção…</p>
+  if (state.status === 'error') {
+    return <>
+      <p role="alert">Não foi possível carregar a inspeção.</p>
+      <Button onClick={() => { setState({ status: 'loading' }); setAttempt((value) => value + 1) }}>Tentar novamente</Button>
+    </>
+  }
+  if (!state.inspection) return <h1 className="text-2xl font-semibold">Inspeção não encontrada</h1>
+  if (state.inspection.status !== 'em_preenchimento') {
+    return <>
+      <h1 className="text-2xl font-semibold">Edição indisponível</h1>
+      <p>Somente inspeções em preenchimento podem ser alteradas ou enviadas.</p>
+      <Link className="underline" to={`/inspecoes/${encodeURIComponent(id)}`}>Voltar à inspeção</Link>
+    </>
+  }
+  return <EditInspectionForm inspection={state.inspection} repository={repository} />
+}
+
+function editableFields(inspection: Inspecao): InspectionFormValues {
+  const { titulo, setor, responsavel, dataInspecao, checklist } = inspection
+  return { titulo, setor, responsavel, dataInspecao, checklist }
+}
+
+function EditInspectionForm({ inspection, repository }: { inspection: Inspecao; repository: Repository }) {
+  const navigate = useNavigate()
+  const [confirmed, setConfirmed] = useState(inspection)
+  const [values, setValues] = useState(() => editableFields(inspection))
+  const [errors, setErrors] = useState<InspectionFormErrors>({})
+  const [failure, setFailure] = useState(false)
+  const [success, setSuccess] = useState(false)
+  const [pending, setPending] = useState<'save' | 'submit' | null>(null)
+  const processing = useRef(false)
+  const submitted = useRef(false)
+  const formRef = useRef<HTMLFormElement>(null)
+  const dirty = JSON.stringify(values) !== JSON.stringify(editableFields(confirmed))
+  const blocker = useBlocker(() => !submitted.current && (dirty || processing.current))
+
+  useBeforeUnload((event) => {
+    if (!submitted.current && (dirty || processing.current)) event.preventDefault()
+  })
+  useEffect(() => {
+    if (blocker.state !== 'blocked') return
+    if (!processing.current && window.confirm('Descartar as alterações não salvas desta inspeção?')) blocker.proceed()
+    else blocker.reset()
+  }, [blocker])
+  useEffect(() => {
+    formRef.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus()
+  }, [errors])
+
+  async function persist(action: 'save' | 'submit') {
+    if (processing.current || submitted.current) return
+    setSuccess(false)
+    setFailure(false)
+    const result = (action === 'save' ? saveDraftSchema : submitInspectionSchema).safeParse(values)
+    if (!result.success) {
+      setErrors(getInspectionFormErrors(result.error))
+      return
+    }
+    processing.current = true
+    setPending(action)
+    setErrors({})
+    try {
+      const updated = action === 'save'
+        ? await repository.saveDraft(inspection.id, result.data)
+        : await repository.submit(inspection.id, result.data)
+      setConfirmed(updated)
+      setValues(editableFields(updated))
+      if (action === 'submit') {
+        submitted.current = true
+        await navigate(`/inspecoes/${encodeURIComponent(updated.id)}`)
+      } else {
+        setSuccess(true)
+      }
+    } catch {
+      setFailure(true)
+    } finally {
+      processing.current = false
+      setPending(null)
+    }
+  }
+
+  return <>
+    <header className="space-y-2">
+      <h1 className="text-3xl font-semibold tracking-tight">Editar inspeção</h1>
+      <p>{confirmed.protocolo} · Em preenchimento</p>
+    </header>
+    <form ref={formRef} noValidate aria-busy={pending !== null} className="space-y-6" onSubmit={(event) => {
+      event.preventDefault()
+      void persist('save')
+    }}>
+      <InspectionFields values={values} errors={errors} disabled={pending !== null} onChange={(next) => {
+        setValues(next)
+        setSuccess(false)
+      }} />
+      {failure && <p role="alert" className="text-sm text-destructive">Não foi possível concluir a operação. Suas alterações foram mantidas. Tente novamente.</p>}
+      {success && <p role="status">Alterações salvas.</p>}
+      {pending && <p role="status">{pending === 'save' ? 'Salvando alterações…' : 'Enviando para aprovação…'}</p>}
+      <div className="flex flex-wrap gap-3">
+        <Button type="submit" disabled={pending !== null}>{pending === 'save' ? 'Salvando…' : 'Salvar alterações'}</Button>
+        <Button type="button" disabled={pending !== null} onClick={() => { void persist('submit') }}>
+          {pending === 'submit' ? 'Enviando…' : 'Enviar para aprovação'}
+        </Button>
+        <Button type="button" variant="outline" disabled={pending !== null} onClick={() => navigate(`/inspecoes/${encodeURIComponent(inspection.id)}`)}>Cancelar</Button>
+      </div>
+    </form>
+  </>
+}

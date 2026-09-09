@@ -20,7 +20,8 @@ export interface InspectionRepository {
   findById(id: string): Promise<Inspecao | null>
   create(input: CreateInspectionInput): Promise<Inspecao>
   saveDraft(id: string, input: SaveDraftInput): Promise<Inspecao>
-  submit(id: string): Promise<Inspecao>
+  /** Com input, salva os campos e envia em uma única operação de persistência. */
+  submit(id: string, input?: SaveDraftInput): Promise<Inspecao>
   approve(id: string): Promise<Inspecao>
   reject(id: string, motivo: string): Promise<Inspecao>
   reopen(id: string): Promise<Inspecao>
