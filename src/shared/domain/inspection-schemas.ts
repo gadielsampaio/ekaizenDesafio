@@ -38,6 +38,8 @@ const eventoBaseSchema = z.strictObject({
   dataHora: dataHoraSchema,
 })
 
+export const motivoReprovacaoSchema = z.string().trim().min(10).max(300)
+
 export const eventoHistoricoSchema = z.discriminatedUnion('tipo', [
   eventoBaseSchema.extend({ tipo: z.literal('criacao') }),
   eventoBaseSchema.extend({ tipo: z.literal('envio') }),
@@ -45,7 +47,7 @@ export const eventoHistoricoSchema = z.discriminatedUnion('tipo', [
   eventoBaseSchema.extend({ tipo: z.literal('reabertura') }),
   eventoBaseSchema.extend({
     tipo: z.literal('reprovacao'),
-    motivo: z.string().trim().min(10).max(300),
+    motivo: motivoReprovacaoSchema,
   }),
 ])
 

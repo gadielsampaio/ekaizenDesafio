@@ -30,6 +30,7 @@ src/
   features/
     create-inspection/         # Formulário, schema de entrada, criação e testes
     edit-inspection/           # Rascunho, validação de envio, transição e testes
+    review-inspection/         # Consulta somente leitura, decisões e testes
   shared/
     domain/                    # Tipos, schemas e perguntas fixas
     contracts/                 # InspectionRepository
@@ -47,11 +48,11 @@ As pastas de capacidades são criadas somente quando implementadas, mantendo jun
 
 Os schemas validam enums, campos obrigatórios, datas ISO (`YYYY-MM-DD`) e timestamps ISO com fuso. Objetos são estritos: campos extras são rejeitados. O checklist exige exatamente `identificacao`, `avarias` e `protecoes`; cada resposta aceita `sim`, `nao` ou `null` e uma observação textual. As perguntas vivem apenas em `CHECKLIST_PERGUNTAS`, fora das inspeções persistidas. `criarChecklistVazio()` retorna objetos independentes para cada inspeção.
 
-Esses schemas validam a estrutura dos dados. A edição e o envio possuem regras específicas no slice, fora da UI; revisão e reabertura permanecem para outras etapas. A existência de um status válido no schema não autoriza uma transição.
+Esses schemas validam a estrutura dos dados. A edição e o envio possuem regras específicas no slice, fora da UI; a revisão também valida o estado antes de decidir; reabertura permanece para outra etapa. A existência de um status válido no schema não autoriza uma transição.
 
 ## Persistência
 
-`InspectionRepository` define `list`, `findById`, `create`, `saveDraft`, `submit`, `approve`, `reject` e `reopen`. As mutações retornam `Promise<Inspecao>`; `findById` retorna `null` quando não encontra. A implementação concreta em `app/inspection-repository.ts` disponibiliza `create`, `findById`, `saveDraft` e `submit`, tipadas com `Pick<InspectionRepository, 'create' | 'findById' | 'saveDraft' | 'submit'>`. As outras operações não possuem implementação ou stubs. A UI de criação recebe apenas a operação `create`, sem acesso a escrita de snapshots ou localStorage.
+`InspectionRepository` define `list`, `findById`, `create`, `saveDraft`, `submit`, `approve`, `reject` e `reopen`. As mutações retornam `Promise<Inspecao>`; `findById` retorna `null` quando não encontra. A implementação concreta em `app/inspection-repository.ts` disponibiliza `create`, `findById`, `saveDraft`, `submit`, `approve` e `reject`, tipadas como um subconjunto de `InspectionRepository`. As outras operações não possuem implementação ou stubs. A UI de criação recebe apenas a operação `create`, sem acesso a escrita de snapshots ou localStorage.
 
 `createInspectionStorage(window.localStorage)` fornece `read()` e `write(inspections)`, ambos assíncronos, sem latência artificial. A dependência é recebida por parâmetro para facilitar testes e evitar acesso ao navegador durante a importação do módulo.
 
@@ -94,6 +95,14 @@ Acesse **Editar inspeção** no placeholder. Somente inspeções `em_preenchimen
 
 Durante a operação, os campos e botões ficam desabilitados. Falhas preservam todos os valores digitados e permitem tentar novamente. Salvar mantém a edição aberta; enviar navega para o placeholder, que consulta o estado persistido. Sair com alterações não salvas exige confirmação. Os campos de criação e edição são compartilhados, mantendo as regras e operações em seus slices.
 
+## Revisar uma inspeção
+
+Na consulta `/inspecoes/:id`, inspeções em aprovação mostram os dados, checklist e histórico somente leitura, com ações **Aprovar** e **Reprovar**. O checklist não decide automaticamente o resultado: mesmo com respostas Não, a pessoa revisora pode aprovar. Observações de respostas Sim permanecem ocultas.
+
+Reprovar abre um formulário na própria página. O motivo é obrigatório, com trim e 10–300 caracteres, reutilizando o mesmo schema do evento de reprovação. Cancelar fecha o formulário sem chamar o repositório nem modificar a inspeção. Durante uma decisão, as ações e o motivo ficam bloqueados. Em falha, o texto digitado é preservado para nova tentativa e o status confirmado permanece igual.
+
+A camada de dados aceita decisões apenas em `em_aprovacao`. Cada decisão grava o novo status, a atualização de data/hora e um evento de aprovação ou reprovação em uma única escrita. A fila existente serializa as decisões; uma decisão repetida ou concorrente perde a autorização pelo estado e não gera outro evento. Após sucesso, a consulta adota a inspeção retornada pelo repositório imediatamente e remove as ações de revisão. Inspeções aprovadas e reprovadas continuam somente leitura; reabertura não está implementada.
+
 ## Próximas etapas
 
 Implementar as demais capacidades com funções testáveis que validem a ação antes de persistir alterações ou acrescentar eventos. O fluxo definido é:
@@ -105,7 +114,7 @@ em_aprovacao → reprovar → reprovada
 reprovada → reabrir → em_preenchimento
 ```
 
-Permanecem pendentes: revisão/aprovação/reprovação, reabertura, listagem/filtros/contadores, detalhe completo e os seis exemplos iniciais. O armazenamento corrompido já é rejeitado sem perder dados e a UI mostra erro, mas ainda falta a recuperação explícita com reset confirmado, exigida pelo PDF. Também permanecem pendentes o simulador reproduzível de atraso/falha, a configuração e aferição da cobertura mínima de 80% de linhas e branches das regras/dados, e os entregáveis finais de publicação. As falhas e atrasos deste slice são controlados nos testes, por mocks e Promises, sem simulador na aplicação.
+Permanecem pendentes: reabertura, listagem/filtros/contadores, detalhe completo e os seis exemplos iniciais. O armazenamento corrompido já é rejeitado sem perder dados e a UI mostra erro, mas ainda falta a recuperação explícita com reset confirmado, exigida pelo PDF. Também permanecem pendentes o simulador reproduzível de atraso/falha, a configuração e aferição da cobertura mínima de 80% de linhas e branches das regras/dados, e os entregáveis finais de publicação. As falhas e atrasos deste slice são controlados nos testes, por mocks e Promises, sem simulador na aplicação.
 
 ## UI e testes
 
@@ -117,4 +126,4 @@ npx shadcn@latest add input
 
 Referências da configuração: [shadcn/ui com Vite](https://ui.shadcn.com/docs/installation/vite), [Tailwind com Vite](https://tailwindcss.com/docs/installation/using-vite) e [Vitest](https://vitest.dev/guide/).
 
-Os testes ficam próximos ao código. A suíte cobre schemas, checklist, leitura e escrita no localStorage do jsdom, corrupção, versões incompatíveis, falhas de acesso e quota, preservação de dados e histórico em escrita inválida e navegação com React Testing Library + user-event. Os testes do slice também cobrem cadastro válido, entradas inválidas, estado inicial, histórico único, persistência após recarga, colisões e chamadas concorrentes, envio repetido, erros associados aos campos, ordem de foco, descarte confirmado e nova tentativa após falha. Os testes de edição cobrem rascunhos incompletos, envio atômico, limites das observações, bloqueio por estado, concorrência, falhas sem perda de dados e comportamento do formulário. Revisão e reabertura ainda não estão implementadas. Não há percentual de cobertura aferido nesta etapa.
+Os testes ficam próximos ao código. A suíte cobre schemas, checklist, leitura e escrita no localStorage do jsdom, corrupção, versões incompatíveis, falhas de acesso e quota, preservação de dados e histórico em escrita inválida e navegação com React Testing Library + user-event. Os testes do slice também cobrem cadastro válido, entradas inválidas, estado inicial, histórico único, persistência após recarga, colisões e chamadas concorrentes, envio repetido, erros associados aos campos, ordem de foco, descarte confirmado e nova tentativa após falha. Os testes de edição cobrem rascunhos incompletos, envio atômico, limites das observações, bloqueio por estado, concorrência, falhas sem perda de dados e comportamento do formulário. Os testes de revisão cobrem decisões, motivos inválidos, cancelamento, concorrência e falhas sem perda de dados. Reabertura ainda não está implementada. Não há percentual de cobertura aferido nesta etapa.

@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import type { InspectionRepository } from '@/shared/contracts/inspection-repository'
 import type { Inspecao } from '@/shared/domain/inspection'
 import { Button } from '@/shared/ui/button'
+import { ReviewInspectionPanel } from '@/features/review-inspection/review-inspection-panel'
 
 type LoadState =
   | { status: 'loading' }
@@ -11,7 +12,7 @@ type LoadState =
 
 // Confirma a persistência pela consulta; não é o slice de detalhe.
 export function InspectionPlaceholder({ repository }: {
-  repository: Pick<InspectionRepository, 'findById'>
+  repository: Pick<InspectionRepository, 'findById' | 'approve' | 'reject'>
 }) {
   const { id = '' } = useParams()
   const [state, setState] = useState<LoadState>({ status: 'loading' })
@@ -45,7 +46,11 @@ export function InspectionPlaceholder({ repository }: {
       {state.inspection && (
         <>
           <p className="break-words">{state.inspection.protocolo} — {state.inspection.titulo}</p>
-          <p>Status: {{ em_preenchimento: 'Em preenchimento', em_aprovacao: 'Em aprovação', aprovada: 'Aprovada', reprovada: 'Reprovada' }[state.inspection.status]}</p>
+          <p aria-live="polite">Status: {{ em_preenchimento: 'Em preenchimento', em_aprovacao: 'Em aprovação', aprovada: 'Aprovada', reprovada: 'Reprovada' }[state.inspection.status]}</p>
+          {state.inspection.status !== 'em_preenchimento' && <ReviewInspectionPanel
+            inspection={state.inspection} repository={repository}
+            onReviewed={(inspection) => setState({ status: 'loaded', inspection })}
+          />}
           {state.inspection.status === 'em_preenchimento' && <Button asChild className="self-start">
             <Link to={`/inspecoes/${encodeURIComponent(state.inspection.id)}/editar`}>Editar inspeção</Link>
           </Button>}
