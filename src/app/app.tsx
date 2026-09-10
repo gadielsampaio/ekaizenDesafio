@@ -1,8 +1,8 @@
 import { useState, useSyncExternalStore } from 'react'
 import { DataControls } from '@/features/recover-data/data-controls'
 import type { createOperationSimulation } from '@/shared/storage/operation-simulation'
-import { Link, Route, Routes, useLocation } from 'react-router-dom'
-import { Button } from '@/shared/ui/button'
+import { Route, Routes, useLocation } from 'react-router-dom'
+import { BackToInspections } from '@/shared/ui/back-to-inspections'
 import type { InspectionRepository } from '@/shared/contracts/inspection-repository'
 import { CreateInspectionPage } from '@/features/create-inspection/create-inspection-page'
 import { InspectionPlaceholder } from './inspection-placeholder'
@@ -20,8 +20,7 @@ export function App({ repository, dataControls }: {
   const location = useLocation()
   const [revision, setRevision] = useState(0)
   return (
-    <main className="mx-auto flex min-h-svh max-w-2xl flex-col justify-center gap-4 px-6 py-12">
-      {dataControls && <DataControls {...dataControls} onRecovered={() => setRevision((value) => value + 1)} />}
+    <main className="mx-auto flex min-h-svh w-full max-w-6xl flex-col gap-6 px-4 py-6 sm:px-8 sm:py-10">
       <fieldset disabled={resetting} inert={resetting} className="contents" aria-label="Inspeções">
       <Routes key={revision}>
         <Route
@@ -35,15 +34,14 @@ export function App({ repository, dataControls }: {
           path="*"
           element={
             <>
+              <BackToInspections />
               <h1 className="text-2xl font-semibold">Página não encontrada</h1>
-              <Button asChild className="self-start">
-                <Link to="/">Voltar ao início</Link>
-              </Button>
             </>
           }
         />
       </Routes>
       </fieldset>
+      {dataControls && <div className="mt-8"><DataControls {...dataControls} onRecovered={() => setRevision((value) => value + 1)} /></div>}
     </main>
   )
 }

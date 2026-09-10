@@ -30,7 +30,7 @@
 
 :root {
   font-family: ui-sans-serif, system-ui, sans-serif;
-  --radius: 0.625rem;
+  --radius: 0.5rem;
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
@@ -48,10 +48,12 @@
   --destructive: oklch(0.577 0.245 27.325);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  --ring: oklch(0.45 0.08 250);
+  --page-background: #f7f7f6;
 }
 
 .dark {
+  --page-background: var(--background);
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);
@@ -74,5 +76,12 @@
 
 @layer base {
   * { @apply border-border outline-ring/50; }
-  body { @apply m-0 bg-background text-foreground; }
+  body { @apply m-0 text-foreground; background-color: var(--page-background); }
+}
+
+@layer components {
+  .surface { @apply min-w-0 rounded-2xl border bg-card p-4 sm:p-6; }
+  .field-control { @apply min-h-12 w-full min-w-0 rounded-lg border border-input bg-card px-3 text-base outline-none hover:border-neutral-400 focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 aria-invalid:border-destructive sm:text-sm; }
+  .notice { @apply rounded-lg border bg-card p-4 text-sm; }
+  .form-actions { @apply flex flex-col gap-3 sm:flex-row sm:justify-end; }
 }

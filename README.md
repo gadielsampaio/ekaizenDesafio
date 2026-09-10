@@ -133,6 +133,8 @@ Permanecem pendentes: detalhe completo. A recuperação explícita e o simulador
 
 ## Simular atraso, falha e restaurar dados
 
+Os controles de dados ficam abaixo do conteúdo principal, em todas as telas.
+
 Abra **Simulação de operações**, disponível em todas as telas. **Atraso por operação** permite escolher 0, 1, 3 ou 5 segundos. **Falhar próxima operação** programa exatamente uma falha: a próxima chamada ao repositório (listar, consultar, criar, salvar, transicionar ou restaurar) aguarda o atraso escolhido e falha antes de acessar os dados. Chamadas subsequentes funcionam normalmente. Configure depois que a tela carregar para testar uma ação específica. Exemplo: abra a edição, escolha 3 segundos, programe a falha e salve. Durante a espera o envio fica bloqueado; após a falha os valores continuam preenchidos. Clique novamente para salvar sem falha.
 
 Configuração e falha programada vivem somente em memória e são limpas ao recarregar. Cada chamada captura sua configuração ao entrar na fila; alterações no controle não afetam chamadas já iniciadas. A fila serializa também consultas e reset. Não há aleatoriedade. Os testes usam relógio falso para verificar atraso sem espera real. O reset fica indisponível enquanto houver operação pendente.
@@ -143,6 +145,8 @@ Para testar corrupção manualmente, nas ferramentas do navegador altere apenas 
 
 
 ## UI e testes
+
+A fundação visual usa o container responsivo do redesign, fundo neutro e botões com altura mínima de 44 px no tamanho padrão. As classes compartilhadas `surface`, `field-control`, `notice` e `form-actions` centralizam a apresentação. O componente `BackToInspections` preserva os parâmetros da URL e será aplicado às telas durante a migração incremental.
 
 Tailwind usa o plugin de Vite. O shadcn/ui foi configurado manualmente com `components.json`, aliases `@/*`, tokens CSS e um `Button` local baseado no padrão new-york. Radix Slot permite compor o botão com links; `class-variance-authority`, `clsx` e `tailwind-merge` suportam variantes e classes. Novos componentes podem ser adicionados conforme forem necessários:
 

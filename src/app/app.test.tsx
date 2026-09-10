@@ -22,13 +22,16 @@ describe('estrutura inicial da aplicação', () => {
     expect(screen.getByRole('heading', { name: 'Sistema de inspeções' })).toBeInTheDocument()
   })
 
-  it('permite voltar ao início a partir de uma rota desconhecida', async () => {
+  it('permite voltar para inspeções preservando filtros a partir de uma rota desconhecida', async () => {
     const user = userEvent.setup()
-    renderApp('/desconhecida')
+    const search = '?busca=Prensa&setor=Produ%C3%A7%C3%A3o&status=aprovada&ordem=antigos'
+    const { router } = renderApp(`/desconhecida${search}`)
 
     expect(screen.getByRole('heading', { name: 'Página não encontrada' })).toBeInTheDocument()
-    await user.click(screen.getByRole('link', { name: 'Voltar ao início' }))
+    await user.click(screen.getByRole('link', { name: 'Voltar para inspeções' }))
     expect(screen.getByRole('heading', { name: 'Sistema de inspeções' })).toBeInTheDocument()
+    expect(router.state.location.pathname).toBe('/')
+    expect(router.state.location.search).toBe(search)
   })
 
   it('abre o formulário pelo link Nova inspeção', async () => {
