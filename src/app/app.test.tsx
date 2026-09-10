@@ -19,7 +19,7 @@ function renderApp(path = '/') {
 describe('estrutura inicial da aplicação', () => {
   it('renderiza a página inicial', () => {
     renderApp()
-    expect(screen.getByRole('heading', { name: 'Sistema de inspeções' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Inspeções' })).toBeInTheDocument()
   })
 
   it('permite voltar para inspeções preservando filtros a partir de uma rota desconhecida', async () => {
@@ -29,7 +29,7 @@ describe('estrutura inicial da aplicação', () => {
 
     expect(screen.getByRole('heading', { name: 'Página não encontrada' })).toBeInTheDocument()
     await user.click(screen.getByRole('link', { name: 'Voltar para inspeções' }))
-    expect(screen.getByRole('heading', { name: 'Sistema de inspeções' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Inspeções' })).toBeInTheDocument()
     expect(router.state.location.pathname).toBe('/')
     expect(router.state.location.search).toBe(search)
   })
