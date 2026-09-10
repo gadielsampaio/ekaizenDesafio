@@ -7,6 +7,7 @@ import { Button } from '@/shared/ui/button'
 import { InspectionFormShell } from '@/shared/ui/inspection-form-shell'
 import { BackToInspections } from '@/shared/ui/back-to-inspections'
 import { InspectionFields } from '@/shared/ui/inspection-fields'
+import { Spinner } from '@/shared/ui/spinner'
 import { saveDraftSchema, submitInspectionSchema } from './edit-inspection-schema'
 
 type Repository = Pick<InspectionRepository, 'findById' | 'saveDraft' | 'submit'>
@@ -123,9 +124,9 @@ function EditInspectionForm({ inspection, repository }: { inspection: Inspecao; 
       {success && <p className="notice border-emerald-200 bg-emerald-50 text-emerald-900" role="status">Alterações salvas.</p>}
       {pending && <p role="status">{pending === 'save' ? 'Salvando alterações…' : 'Enviando para aprovação…'}</p>}
       <div className="form-actions">
-        <Button type="submit" variant="outline" disabled={pending !== null}>{pending === 'save' ? 'Salvando…' : 'Salvar alterações'}</Button>
+        <Button type="submit" variant="outline" disabled={pending !== null}>{pending === 'save' && <Spinner />}{pending === 'save' ? 'Salvando...' : 'Salvar alterações'}</Button>
         <Button type="button" disabled={pending !== null || !canSubmit} onClick={() => { void persist('submit') }}>
-          {pending === 'submit' ? 'Enviando…' : 'Enviar para aprovação'}
+          {pending === 'submit' && <Spinner />}{pending === 'submit' ? 'Enviando...' : 'Enviar para aprovação'}
         </Button>
         <Button type="button" variant="ghost" disabled={pending !== null} onClick={() => navigate(`/inspecoes/${encodeURIComponent(inspection.id)}${search}`)}>Cancelar</Button>
       </div>

@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import type { InspectionRepository } from '@/shared/contracts/inspection-repository'
 import type { Inspecao } from '@/shared/domain/inspection'
 import { Button } from '@/shared/ui/button'
+import { Spinner } from '@/shared/ui/spinner'
 
 export function ReopenInspectionButton({ inspection, repository, onReopened }: {
   inspection: Inspecao
@@ -34,6 +35,6 @@ export function ReopenInspectionButton({ inspection, repository, onReopened }: {
   return <div className="surface space-y-3" aria-busy={pending}>
     {failed && <p role="alert" className="notice border-red-200 bg-red-50 text-red-900">Não foi possível reabrir a inspeção. O estado foi mantido. Tente novamente.</p>}
     {pending && <p role="status">Reabrindo inspeção…</p>}
-    <Button disabled={pending} onClick={() => { void reopen() }}>{pending ? 'Reabrindo…' : 'Reabrir para correção'}</Button>
+    <Button disabled={pending} onClick={() => { void reopen() }}>{pending && <Spinner />}{pending ? 'Reabrindo...' : 'Reabrir para correção'}</Button>
   </div>
 }

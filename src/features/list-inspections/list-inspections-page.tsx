@@ -5,6 +5,7 @@ import type { InspectionRepository } from '@/shared/contracts/inspection-reposit
 import type { Inspecao } from '@/shared/domain/inspection'
 import { setorSchema, statusInspecaoSchema } from '@/shared/domain/inspection-schemas'
 import { Button } from '@/shared/ui/button'
+import { InspectionListSkeleton } from '@/shared/ui/inspection-loading-skeletons'
 import { filterInspections, type InspectionOrder } from './list-inspections'
 
 type State = { status: 'loading' } | { status: 'error' } | { status: 'loaded'; inspections: Inspecao[] }
@@ -64,7 +65,7 @@ export function ListInspectionsPage({ repository }: { repository: Pick<Inspectio
         {filtered && <Button className="h-11 justify-self-start" variant="ghost" onClick={() => setParams({})}>Limpar</Button>}
       </div>
     </div>
-    {state.status === 'loading' && <p role="status">Carregando inspeções…</p>}
+    {state.status === 'loading' && <InspectionListSkeleton />}
     {state.status === 'error' && <div className="space-y-4 rounded-lg border bg-card p-6"><p role="alert">Não foi possível listar as inspeções.</p><Button variant="outline" onClick={() => { setState({ status: 'loading' }); setAttempt((value) => value + 1) }}>Tentar novamente</Button></div>}
     {state.status === 'loaded' && <>
       <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">

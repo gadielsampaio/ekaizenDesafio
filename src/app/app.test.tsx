@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
@@ -65,6 +65,24 @@ describe('estrutura inicial da aplicação', () => {
     vi.spyOn(repository, 'findById').mockResolvedValue(createInspectionFixture())
     await user.click(screen.getByRole('button', { name: 'Tentar novamente' }))
     expect(await screen.findByRole('heading', { name: 'Inspeção da prensa' })).toBeInTheDocument()
+  })
+
+  it('representa cabeçalho, checklist e histórico enquanto carrega o detalhe', async () => {
+    const repository = createLocalInspectionRepository(createInspectionStorage(localStorage))
+    let resolveInspection: ((inspection: ReturnType<typeof createInspectionFixture>) => void) | undefined
+    vi.spyOn(repository, 'findById').mockReturnValue(new Promise((resolve) => { resolveInspection = resolve }))
+    const router = createMemoryRouter([{ path: '*', element: <App repository={repository} /> }], {
+      initialEntries: ['/inspecoes/inspecao-1'],
+    })
+    render(<RouterProvider router={router} />)
+
+    expect(screen.getByRole('status', { name: 'Carregando inspeção' })).toBeInTheDocument()
+    expect(document.querySelectorAll('[data-slot="skeleton"]').length).toBeGreaterThanOrEqual(12)
+    expect(screen.queryByRole('heading', { name: 'Checklist' })).not.toBeInTheDocument()
+
+    await act(async () => { resolveInspection?.(createInspectionFixture()) })
+    expect(await screen.findByRole('heading', { name: 'Inspeção da prensa' })).toBeInTheDocument()
+    expect(screen.queryByRole('status', { name: 'Carregando inspeção' })).not.toBeInTheDocument()
   })
 })
 

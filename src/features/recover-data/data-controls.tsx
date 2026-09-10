@@ -1,5 +1,6 @@
 import { useRef, useState, useSyncExternalStore } from 'react'
 import { Button } from '@/shared/ui/button'
+import { Spinner } from '@/shared/ui/spinner'
 import type { createOperationSimulation } from '@/shared/storage/operation-simulation'
 
 export function DataControls({ simulation, reset, onRecovered }: {
@@ -27,7 +28,7 @@ export function DataControls({ simulation, reset, onRecovered }: {
       setResetting(false)
     }
   }
-  return <aside className="surface space-y-4 text-sm" aria-label="Controles de dados">
+  return <aside className="surface space-y-4 text-sm" aria-label="Controles de dados" aria-busy={resetting}>
     <details>
       <summary className="min-h-11 cursor-pointer content-center rounded-md font-semibold focus-visible:outline-2 focus-visible:outline-ring">Simulação de operações</summary>
       <div className="mt-4 grid items-end gap-4 sm:grid-cols-[minmax(0,15rem)_auto]">
@@ -46,7 +47,7 @@ export function DataControls({ simulation, reset, onRecovered }: {
     {resetting && <p role="status">Restaurando dados…</p>}
     <div className="flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
       <p className="text-xs text-muted-foreground">Restaure os exemplos iniciais mediante confirmação.</p>
-      <Button className="whitespace-normal" variant="outline" disabled={state.pending > 0 || resetting} onClick={() => { void recover() }}>{resetting ? 'Restaurando…' : 'Restaurar dados da aplicação'}</Button>
+      <Button className="whitespace-normal" variant="outline" disabled={state.pending > 0 || resetting} onClick={() => { void recover() }}>{resetting && <Spinner />}{resetting ? 'Restaurando...' : 'Restaurar dados da aplicação'}</Button>
     </div>
   </aside>
 }

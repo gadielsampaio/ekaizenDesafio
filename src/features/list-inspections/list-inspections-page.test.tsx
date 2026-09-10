@@ -128,8 +128,11 @@ describe('listagem na interface', () => {
   it('mostra carregamento e permite tentar novamente após falha', async () => {
     vi.spyOn(Storage.prototype, 'setItem').mockImplementationOnce(() => { throw new Error('Sem espaço') })
     const { user } = setup()
-    expect(screen.getByText('Carregando inspeções…')).toBeInTheDocument()
+    expect(screen.getByRole('status', { name: 'Carregando inspeções' })).toBeInTheDocument()
+    expect(document.querySelectorAll('[data-slot="skeleton"]').length).toBeGreaterThanOrEqual(12)
+    expect(screen.queryByRole('list')).not.toBeInTheDocument()
     expect(await screen.findByRole('alert')).toHaveTextContent('Não foi possível listar')
+    expect(screen.queryByRole('status', { name: 'Carregando inspeções' })).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Tentar novamente' }))
     expect(await screen.findByRole('button', { name: 'Todas (6)' })).toBeInTheDocument()
   })

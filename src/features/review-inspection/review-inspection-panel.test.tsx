@@ -109,6 +109,9 @@ describe('revisão pela interface', () => {
     await user.dblClick(button)
     expect(button).toBeDisabled()
     expect(spy).toHaveBeenCalledTimes(1)
+    const pendingButton = screen.getByRole('button', { name: action === 'approve' ? 'Aprovando...' : 'Reprovando...' })
+    expect(pendingButton.querySelector('[data-slot="spinner"]')).toBeInTheDocument()
+    expect(document.querySelector('[data-slot="skeleton"]')).not.toBeInTheDocument()
     expect(screen.getByRole('status')).toHaveTextContent(action === 'approve' ? 'Aprovando inspeção…' : 'Reprovando inspeção…')
     if (action === 'reject') {
       expect(screen.getByLabelText('Motivo da reprovação')).toBeDisabled()

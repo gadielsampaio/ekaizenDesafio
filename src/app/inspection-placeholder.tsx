@@ -6,6 +6,7 @@ import type { Inspecao } from '@/shared/domain/inspection'
 import { BackToInspections } from '@/shared/ui/back-to-inspections'
 import { inspectionStatus } from '@/shared/ui/inspection-status'
 import { Button } from '@/shared/ui/button'
+import { InspectionDetailSkeleton } from '@/shared/ui/inspection-loading-skeletons'
 import { ReviewInspectionPanel } from '@/features/review-inspection/review-inspection-panel'
 
 type LoadState =
@@ -31,7 +32,7 @@ export function InspectionPlaceholder({ repository }: {
     return () => { active = false }
   }, [id, repository, attempt])
 
-  if (state.status === 'loading') return <><BackToInspections /><p role="status">Carregando inspeção…</p></>
+  if (state.status === 'loading') return <><BackToInspections /><InspectionDetailSkeleton /></>
   if (state.status === 'error') {
     return (
       <>

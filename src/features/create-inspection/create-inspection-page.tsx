@@ -6,6 +6,7 @@ import { checklistIdSchema } from '@/shared/domain/inspection-schemas'
 import { Button } from '@/shared/ui/button'
 import { InspectionFormShell } from '@/shared/ui/inspection-form-shell'
 import { InspectionFields } from '@/shared/ui/inspection-fields'
+import { Spinner } from '@/shared/ui/spinner'
 import { getInspectionFormErrors, type InspectionFormValues, type InspectionFormErrors } from '@/shared/lib/inspection-form'
 import { submitInspectionSchema } from '@/features/edit-inspection/edit-inspection-schema'
 import { createInspectionSchema } from './create-inspection-schema'
@@ -95,8 +96,8 @@ export function CreateInspectionPage({ repository }: {
           </p>
         )}
         <div className="form-actions">
-          <Button type="submit" variant="outline" disabled={isSaving}>{pending === 'draft' ? 'Salvando…' : 'Salvar rascunho'}</Button>
-          <Button type="button" disabled={isSaving || !canSubmit} onClick={() => { void persist('submit') }}>{pending === 'submit' ? 'Enviando…' : 'Enviar para aprovação'}</Button>
+          <Button type="submit" variant="outline" disabled={isSaving}>{pending === 'draft' && <Spinner />}{pending === 'draft' ? 'Salvando...' : 'Salvar rascunho'}</Button>
+          <Button type="button" disabled={isSaving || !canSubmit} onClick={() => { void persist('submit') }}>{pending === 'submit' && <Spinner />}{pending === 'submit' ? 'Enviando...' : 'Enviar para aprovação'}</Button>
           <Button type="button" variant="ghost" disabled={isSaving} onClick={() => navigate('/')}>Cancelar</Button>
         </div>
         {isSaving && <p role="status" className="text-sm text-muted-foreground">{pending === 'submit' ? 'Enviando para aprovação…' : 'Salvando inspeção…'}</p>}

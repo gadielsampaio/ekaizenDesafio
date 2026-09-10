@@ -6,6 +6,7 @@ import { CHECKLIST_PERGUNTAS } from '@/shared/domain/checklist'
 import { checklistIdSchema, motivoReprovacaoSchema } from '@/shared/domain/inspection-schemas'
 import { Button } from '@/shared/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogTitle, DialogTrigger } from '@/shared/ui/dialog'
+import { Spinner } from '@/shared/ui/spinner'
 import { DiscardReasonDialog } from './discard-reason-dialog'
 
 const eventLabels = { criacao: 'Criação', envio: 'Envio', aprovacao: 'Aprovação', reprovacao: 'Reprovação', reabertura: 'Reabertura' }
@@ -98,7 +99,7 @@ export function ReviewInspectionPanel({ inspection, repository, onReviewed, chil
           {!rejecting && failureMessage}
           {pending === 'approve' && <p role="status">Aprovando inspeção…</p>}
           <div className="flex flex-wrap gap-3">
-            <Button disabled={pending !== null} onClick={() => { void review('approve') }}>Aprovar</Button>
+            <Button disabled={pending !== null} onClick={() => { void review('approve') }}>{pending === 'approve' && <Spinner />}{pending === 'approve' ? 'Aprovando...' : 'Aprovar'}</Button>
             <Dialog open={rejecting} onOpenChange={(open) => {
               if (open) { setRejecting(true); setFailure(false) }
               else requestClose()
@@ -130,7 +131,7 @@ export function ReviewInspectionPanel({ inspection, repository, onReviewed, chil
                   {pending === 'reject' && <p role="status">Reprovando inspeção…</p>}
                   <div className="flex flex-col-reverse gap-3 pt-3 sm:flex-row sm:justify-end">
                     <Button type="button" variant="outline" disabled={pending !== null} onClick={closeRejection}>Cancelar reprovação</Button>
-                    <Button type="submit" disabled={pending !== null}>Confirmar reprovação</Button>
+                    <Button type="submit" disabled={pending !== null}>{pending === 'reject' && <Spinner />}{pending === 'reject' ? 'Reprovando...' : 'Confirmar reprovação'}</Button>
                   </div>
                 </form>
                 <DiscardReasonDialog open={discarding} onOpenChange={setDiscarding} onDiscard={closeRejection} onKeep={() => reasonRef.current?.focus()} />
