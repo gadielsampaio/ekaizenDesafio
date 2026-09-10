@@ -9,13 +9,67 @@ import { createInspectionStorage } from '@/shared/storage/inspection-storage'
 function setup(path = '/') {
   const repository = createLocalInspectionRepository(createInspectionStorage(localStorage))
   const router = createMemoryRouter([{ path: '*', element: <App repository={repository} /> }], { initialEntries: [path] })
-  render(<RouterProvider router={router} />)
-  return { repository, router, user: userEvent.setup() }
+  const { unmount } = render(<RouterProvider router={router} />)
+  return { repository, router, user: userEvent.setup(), unmount }
 }
 
 describe('listagem na interface', () => {
+  it('alterna a ordem pelo teclado sem mudar filtros, contadores ou persistência', async () => {
+    const { user, router, repository } = setup('/?busca=INS-&setor=Manuten%C3%A7%C3%A3o')
+    await screen.findByRole('link', { name: 'Furadeira 02' })
+    const titles = () => screen.getAllByRole('listitem').map((item) => within(item).getByRole('heading').textContent)
+    const counts = screen.getByRole('group', { name: 'Filtrar por status' }).textContent
+    const list = vi.spyOn(repository, 'list')
+    const write = vi.spyOn(Storage.prototype, 'setItem')
+    const button = screen.getByRole('button', { name: /Ordenação atual: mais recentes primeiro/ })
+    expect(titles()).toEqual(['Esmeril 05', 'Furadeira 02'])
+
+    button.focus()
+    await user.keyboard('{Enter}')
+    expect(titles()).toEqual(['Furadeira 02', 'Esmeril 05'])
+    expect(button).toHaveTextContent('Mais antigos primeiro')
+    expect(button).toHaveFocus()
+    expect(new URLSearchParams(router.state.location.search).get('ordem')).toBe('antigos')
+    expect(screen.getByRole('searchbox')).toHaveValue('INS-')
+    expect(screen.getByRole('combobox', { name: 'Setor' })).toHaveValue('Manutenção')
+    expect(screen.getByRole('group', { name: 'Filtrar por status' })).toHaveTextContent(counts ?? '')
+
+    await user.keyboard(' ')
+    expect(titles()).toEqual(['Esmeril 05', 'Furadeira 02'])
+    expect(button).toHaveTextContent('Mais recentes primeiro')
+    expect(new URLSearchParams(router.state.location.search).has('ordem')).toBe(false)
+    expect(list).not.toHaveBeenCalled()
+    expect(write).not.toHaveBeenCalled()
+  })
+
+  it('restaura a ordenação da URL, inclusive após consultar a inspeção e recarregar', async () => {
+    const path = '/?busca=INS-&setor=Manuten%C3%A7%C3%A3o&ordem=antigos'
+    const { user, router, unmount } = setup(path)
+    const link = await screen.findByRole('link', { name: 'Furadeira 02' })
+    expect(screen.getAllByRole('listitem').map((item) => within(item).getByRole('heading').textContent)).toEqual(['Furadeira 02', 'Esmeril 05'])
+    await user.click(link)
+    expect(router.state.location.pathname).toBe('/inspecoes/exemplo-2')
+    expect(router.state.location.search).toBe(path.slice(1))
+    await user.click(await screen.findByRole('link', { name: 'Voltar ao início' }))
+    expect(await screen.findByRole('button', { name: /Ordenação atual: mais antigos primeiro/ })).toBeInTheDocument()
+    const restoredPath = router.state.location.pathname + router.state.location.search
+    unmount()
+
+    setup(restoredPath)
+    await screen.findByRole('link', { name: 'Furadeira 02' })
+    expect(screen.getByRole('button', { name: /Ordenação atual: mais antigos primeiro/ })).toBeInTheDocument()
+    expect(screen.getAllByRole('listitem').map((item) => within(item).getByRole('heading').textContent)).toEqual(['Furadeira 02', 'Esmeril 05'])
+  })
+
+  it('usa recentes para uma ordem desconhecida na URL', async () => {
+    setup('/?ordem=invalida')
+    await screen.findByRole('link', { name: 'Empilhadeira 06' })
+    expect(screen.getByRole('button', { name: /Ordenação atual: mais recentes primeiro/ })).toBeInTheDocument()
+    expect(screen.getAllByRole('listitem').map((item) => within(item).getByRole('heading').textContent)[0]).toBe('Empilhadeira 06')
+  })
+
   it('exibe cards completos, combina filtros e limpa o estado vazio', async () => {
-    const { user } = setup()
+    const { user, router } = setup('/?ordem=antigos')
     const link = await screen.findByRole('link', { name: 'Transportador 01' })
     const card = link.closest('li')
     if (!card) throw new Error('Card ausente')
@@ -35,6 +89,8 @@ describe('listagem na interface', () => {
     expect(screen.getByRole('button', { name: 'Todas (6)' })).toBeInTheDocument()
     expect(screen.getByRole('searchbox')).toHaveValue('')
     expect(screen.getByRole('combobox', { name: 'Setor' })).toHaveValue('')
+    expect(router.state.location.search).toBe('')
+    expect(screen.getByRole('button', { name: /Ordenação atual: mais recentes primeiro/ })).toBeInTheDocument()
   })
 
   it('preserva filtros no detalhe e atualiza cards e contadores após aprovação', async () => {

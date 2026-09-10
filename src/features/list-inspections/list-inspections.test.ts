@@ -78,4 +78,25 @@ describe('exemplos e listagem', () => {
     expect(filterInspections(records, empty).cards.map((item) => item.id)).toEqual(['exemplo-6', 'exemplo-5', 'exemplo-4', 'exemplo-3', 'exemplo-2', 'exemplo-1'])
     expect(records[0]?.id).toBe('exemplo-1')
   })
+
+  it('alterna a ordem sem modificar os registros, filtros ou contadores', () => {
+    const records = addMissingExamples([])
+    const original = structuredClone(records)
+    const filters = { busca: 'INS-', setor: 'Manutenção', status: '' }
+    const recent = filterInspections(records, filters)
+    const oldest = filterInspections(records, filters, 'antigos')
+    expect(recent.cards.map((item) => item.id)).toEqual(['exemplo-5', 'exemplo-2'])
+    expect(oldest.cards.map((item) => item.id)).toEqual(['exemplo-2', 'exemplo-5'])
+    expect(oldest.counts).toEqual(recent.counts)
+    expect(filterInspections(records, { ...filters, status: 'em_aprovacao' }, 'antigos').cards.map((item) => item.id)).toEqual(['exemplo-2'])
+    expect(records).toEqual(original)
+  })
+
+  it('desempata horários de criação iguais pelo ID nas duas direções', () => {
+    const fixture = createInspectionFixture()
+    const records = [{ ...fixture, id: 'b' }, { ...fixture, id: 'a' }]
+    expect(filterInspections(records, empty).cards.map((item) => item.id)).toEqual(['a', 'b'])
+    expect(filterInspections(records, empty, 'antigos').cards.map((item) => item.id)).toEqual(['b', 'a'])
+    expect(records.map((item) => item.id)).toEqual(['b', 'a'])
+  })
 })

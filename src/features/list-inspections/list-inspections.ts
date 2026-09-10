@@ -8,7 +8,13 @@ export const STATUS_FILTERS = [
   { value: 'reprovada', label: 'Reprovadas' },
 ] as const
 
-export function filterInspections(inspections: readonly Inspecao[], filters: { busca: string; setor: string; status: string }) {
+export type InspectionOrder = 'recentes' | 'antigos'
+
+export function filterInspections(
+  inspections: readonly Inspecao[],
+  filters: { busca: string; setor: string; status: string },
+  order: InspectionOrder = 'recentes',
+) {
   const search = filters.busca.trim().toLocaleLowerCase('pt-BR')
   const base = inspections.filter((inspection) => (
     (!filters.setor || inspection.setor === filters.setor)
@@ -16,6 +22,9 @@ export function filterInspections(inspections: readonly Inspecao[], filters: { b
   ))
   const counts = STATUS_FILTERS.map(({ value, label }) => ({ value, label, count: base.filter((inspection) => !value || inspection.status === value).length }))
   const cards = base.filter((inspection) => !filters.status || inspection.status === filters.status)
-    .sort((a, b) => Date.parse(b.criadoEm) - Date.parse(a.criadoEm) || a.id.localeCompare(b.id))
+    .sort((a, b) => {
+      const difference = Date.parse(b.criadoEm) - Date.parse(a.criadoEm) || a.id.localeCompare(b.id)
+      return order === 'recentes' ? difference : -difference
+    })
   return { cards, counts }
 }
