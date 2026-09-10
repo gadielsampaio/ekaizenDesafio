@@ -18,7 +18,7 @@ async function setup(status: StatusInspecao = 'reprovada') {
   const repository = createLocalInspectionRepository(storage)
   const router = createMemoryRouter([{ path: '*', element: <App repository={repository} /> }], { initialEntries: [`/inspecoes/${original.id}`] })
   render(<RouterProvider router={router} />)
-  await screen.findByRole('heading', { name: 'Inspeção encontrada' })
+  await screen.findByRole('heading', { name: 'Inspeção da prensa' })
   return { original, repository, user: userEvent.setup() }
 }
 

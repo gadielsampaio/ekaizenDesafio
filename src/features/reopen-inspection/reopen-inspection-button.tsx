@@ -31,8 +31,8 @@ export function ReopenInspectionButton({ inspection, repository, onReopened }: {
   }
 
   if (inspection.status !== 'reprovada') return null
-  return <div className="space-y-3" aria-busy={pending}>
-    {failed && <p role="alert" className="text-sm text-destructive">Não foi possível reabrir a inspeção. O estado foi mantido. Tente novamente.</p>}
+  return <div className="surface space-y-3" aria-busy={pending}>
+    {failed && <p role="alert" className="notice border-red-200 bg-red-50 text-red-900">Não foi possível reabrir a inspeção. O estado foi mantido. Tente novamente.</p>}
     {pending && <p role="status">Reabrindo inspeção…</p>}
     <Button disabled={pending} onClick={() => { void reopen() }}>{pending ? 'Reabrindo…' : 'Reabrir para correção'}</Button>
   </div>

@@ -35,7 +35,7 @@ describe('formulário de criação', () => {
     await fillForm(user)
     await user.click(within(screen.getByRole('group', { name: CHECKLIST_PERGUNTAS.avarias })).getByLabelText('Não'))
     await user.click(screen.getByRole('button', { name: 'Salvar rascunho' }))
-    expect(await screen.findByRole('heading', { name: 'Inspeção encontrada' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Transportador 01' })).toBeInTheDocument()
     expect((await repository.findById('inspecao-1'))?.checklist.avarias).toEqual({ resposta: 'nao', observacao: '' })
   })
 
@@ -51,8 +51,8 @@ describe('formulário de criação', () => {
     await user.type(screen.getByLabelText(`Observação — ${CHECKLIST_PERGUNTAS.avarias}`), 'Avaria aparente na carenagem.')
     await user.click(screen.getByRole('button', { name: 'Salvar rascunho' }))
 
-    expect(await screen.findByRole('heading', { name: 'Inspeção encontrada' })).toBeInTheDocument()
-    expect(screen.getByText('INS-000001 — Transportador 01')).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Transportador 01' })).toBeInTheDocument()
+    expect(screen.getByText('INS-000001')).toBeInTheDocument()
     expect(router.state.location.pathname).toBe('/inspecoes/inspecao-1')
 
     unmount()
@@ -60,7 +60,7 @@ describe('formulário de criação', () => {
     render(<RouterProvider router={createMemoryRouter([
       { path: '*', element: <App repository={reloaded} /> },
     ], { initialEntries: ['/inspecoes/inspecao-1'] })} />)
-    expect(await screen.findByRole('heading', { name: 'Inspeção encontrada' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Transportador 01' })).toBeInTheDocument()
     const inspection = await reloaded.findById('inspecao-1')
     expect(inspection?.checklist).toEqual({
       identificacao: { resposta: 'sim', observacao: '' },
@@ -117,7 +117,7 @@ describe('formulário de criação', () => {
     expect(router.state.location.pathname).toBe('/inspecoes/nova')
 
     await act(async () => { resolveCreation?.(createInspectionFixture()) })
-    expect(await screen.findByRole('heading', { name: 'Inspeção encontrada' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Inspeção da prensa' })).toBeInTheDocument()
     expect(repository.create).toHaveBeenCalledTimes(1)
   })
 
@@ -148,7 +148,7 @@ describe('formulário de criação', () => {
     await expect(storage.read()).resolves.toEqual({ version: 1, inspections: [] })
 
     await user.click(screen.getByRole('button', { name: 'Salvar rascunho' }))
-    expect(await screen.findByRole('heading', { name: 'Inspeção encontrada' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Transportador 01' })).toBeInTheDocument()
     expect((await storage.read()).inspections).toHaveLength(1)
     const inspection = await repository.findById('inspecao-1')
     expect(inspection?.checklist.avarias).toEqual({ resposta: 'nao', observacao: '  Avaria aparente na carenagem.  ' })
@@ -179,7 +179,7 @@ describe('formulário de criação', () => {
     await user.tab()
     expect(screen.getByRole('button', { name: 'Salvar rascunho' })).toHaveFocus()
     await user.keyboard('{Enter}')
-    expect(await screen.findByRole('heading', { name: 'Inspeção encontrada' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Prensa 01' })).toBeInTheDocument()
   })
 
   it('confirma descarte mesmo quando somente o checklist foi alterado', async () => {
