@@ -19,6 +19,8 @@ export interface InspectionRepository {
   list(): Promise<Inspecao[]>
   findById(id: string): Promise<Inspecao | null>
   create(input: CreateInspectionInput): Promise<Inspecao>
+  /** Valida, cria e envia com os dois eventos em uma única gravação. */
+  createAndSubmit(input: CreateInspectionInput): Promise<Inspecao>
   saveDraft(id: string, input: SaveDraftInput): Promise<Inspecao>
   /** Com input, salva os campos e envia em uma única operação de persistência. */
   submit(id: string, input?: SaveDraftInput): Promise<Inspecao>

@@ -6,13 +6,14 @@ import { checklistIdSchema } from '@/shared/domain/inspection-schemas'
 import { Button } from '@/shared/ui/button'
 import { InspectionFields } from '@/shared/ui/inspection-fields'
 import { getInspectionFormErrors, type InspectionFormValues, type InspectionFormErrors } from '@/shared/lib/inspection-form'
+import { submitInspectionSchema } from '@/features/edit-inspection/edit-inspection-schema'
 import { createInspectionSchema } from './create-inspection-schema'
 
 const initialValues = { titulo: '', setor: '', responsavel: '', dataInspecao: '' }
 const fieldNames = ['titulo', 'setor', 'responsavel', 'dataInspecao'] as const
 
 export function CreateInspectionPage({ repository }: {
-  repository: Pick<InspectionRepository, 'create'>
+  repository: Pick<InspectionRepository, 'create' | 'createAndSubmit'>
 }) {
   const navigate = useNavigate()
   const [values, setValues] = useState<InspectionFormValues>(() => ({
@@ -21,7 +22,9 @@ export function CreateInspectionPage({ repository }: {
   }))
   const [errors, setErrors] = useState<InspectionFormErrors>({})
   const [failure, setFailure] = useState(false)
-  const [isSaving, setIsSaving] = useState(false)
+  const [pending, setPending] = useState<'draft' | 'submit' | null>(null)
+  const isSaving = pending !== null
+  const canSubmit = submitInspectionSchema.safeParse(values).success
   const processing = useRef(false)
   const saved = useRef(false)
   const formRef = useRef<HTMLFormElement>(null)
@@ -51,27 +54,33 @@ export function CreateInspectionPage({ repository }: {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    await persist('draft')
+  }
+
+  async function persist(action: 'draft' | 'submit') {
     if (processing.current || saved.current) return
 
-    const result = createInspectionSchema.safeParse(values)
+    const result = (action === 'draft' ? createInspectionSchema : submitInspectionSchema).safeParse(values)
     if (!result.success) {
       setErrors(getInspectionFormErrors(result.error))
       return
     }
 
     processing.current = true
-    setIsSaving(true)
+    setPending(action)
     setErrors({})
     setFailure(false)
     try {
-      const inspection = await repository.create(result.data)
+      const inspection = action === 'draft'
+        ? await repository.create(result.data)
+        : await repository.createAndSubmit(result.data)
       saved.current = true
       await navigate(`/inspecoes/${encodeURIComponent(inspection.id)}`)
     } catch {
       setFailure(true)
     } finally {
       processing.current = false
-      setIsSaving(false)
+      setPending(null)
     }
   }
 
@@ -89,10 +98,11 @@ export function CreateInspectionPage({ repository }: {
           </p>
         )}
         <div className="flex flex-wrap gap-3">
-          <Button type="submit" disabled={isSaving}>{isSaving ? 'Salvando…' : 'Salvar inspeção'}</Button>
+          <Button type="submit" disabled={isSaving}>{pending === 'draft' ? 'Salvando…' : 'Salvar rascunho'}</Button>
+          <Button type="button" disabled={isSaving || !canSubmit} onClick={() => { void persist('submit') }}>{pending === 'submit' ? 'Enviando…' : 'Enviar para aprovação'}</Button>
           <Button type="button" variant="outline" disabled={isSaving} onClick={() => navigate('/')}>Cancelar</Button>
         </div>
-        {isSaving && <p role="status" className="text-sm text-muted-foreground">Salvando inspeção…</p>}
+        {isSaving && <p role="status" className="text-sm text-muted-foreground">{pending === 'submit' ? 'Enviando para aprovação…' : 'Salvando inspeção…'}</p>}
       </form>
     </>
   )

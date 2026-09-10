@@ -27,7 +27,7 @@ describe('simulação e recuperação', () => {
     expect(simulation.getSnapshot().pending).toBe(0)
   })
 
-  it.each(['list', 'findById', 'create', 'saveDraft', 'submit', 'approve', 'reject', 'reopen'] as const)('falha de %s não escreve dados nem eventos', async (action) => {
+  it.each(['list', 'findById', 'create', 'createAndSubmit', 'saveDraft', 'submit', 'approve', 'reject', 'reopen'] as const)('falha de %s não escreve dados nem eventos', async (action) => {
     const simulation = createOperationSimulation()
     const storage = createInspectionStorage(localStorage)
     const repository = createLocalInspectionRepository(storage, simulation)
@@ -38,7 +38,7 @@ describe('simulação e recuperação', () => {
     const input = { titulo, setor, responsavel, dataInspecao, checklist }
     const actions = {
       list: () => repository.list(), findById: () => repository.findById(original.id),
-      create: () => repository.create(input), saveDraft: () => repository.saveDraft(original.id, input),
+      create: () => repository.create(input), createAndSubmit: () => repository.createAndSubmit(input), saveDraft: () => repository.saveDraft(original.id, input),
       submit: () => repository.submit(original.id), approve: () => repository.approve(original.id),
       reject: () => repository.reject(original.id, 'Pendência não resolvida.'), reopen: () => repository.reopen(original.id),
     }
@@ -99,7 +99,7 @@ it.each([false, true])('bloqueia mutações durante reset e libera ao terminar (
   const original = createInspectionFixture()
   const { titulo, setor, responsavel, dataInspecao, checklist } = original
   const input = { titulo, setor, responsavel, dataInspecao, checklist }
-  const attempts = [repository.create(input), repository.saveDraft('exemplo-1', input), repository.submit('exemplo-1', input), repository.approve('exemplo-2'), repository.reject('exemplo-2', 'Pendência de integridade.'), repository.reopen('exemplo-4'), repository.reset()]
+  const attempts = [repository.create(input), repository.createAndSubmit(input), repository.saveDraft('exemplo-1', input), repository.submit('exemplo-1', input), repository.approve('exemplo-2'), repository.reject('exemplo-2', 'Pendência de integridade.'), repository.reopen('exemplo-4'), repository.reset()]
   await Promise.all(attempts.map((attempt) => expect(attempt).rejects.toThrow('Aguarde a restauração')))
   expect(simulation.getSnapshot().resetting).toBe(true)
   await vi.advanceTimersByTimeAsync(1000)

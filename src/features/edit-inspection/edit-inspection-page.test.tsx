@@ -28,6 +28,19 @@ async function answerAll(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe('edição e envio pela interface', () => {
+  it('associa o erro e foca os metadados inválidos ao tentar salvar rascunho', async () => {
+    const { original, repository, user } = await setup()
+    const save = vi.spyOn(repository, 'saveDraft')
+    await user.clear(screen.getByLabelText('Título'))
+    await user.click(screen.getByRole('button', { name: 'Salvar alterações' }))
+    expect(screen.getByLabelText('Título')).toHaveAttribute('aria-invalid', 'true')
+    expect(screen.getByLabelText('Título')).toHaveAccessibleDescription(/Informe um título/)
+    expect(screen.getByLabelText('Título')).toHaveFocus()
+    expect(screen.getByRole('button', { name: 'Enviar para aprovação' })).toBeDisabled()
+    expect(save).not.toHaveBeenCalled()
+    await expect(repository.findById(original.id)).resolves.toEqual(original)
+  })
+
   it('carrega os campos, aceita rascunho incompleto e salva sem criar evento de edição', async () => {
     const { original, repository, user } = await setup()
     expect(screen.getByLabelText('Título')).toHaveValue(original.titulo)
@@ -46,18 +59,26 @@ describe('edição e envio pela interface', () => {
     expect(updated?.historico).toEqual(original.historico)
   })
 
-  it('aponta respostas ausentes e observações inválidas sem chamar o envio', async () => {
+  it('mantém o envio indisponível até todas as respostas e observações serem válidas', async () => {
     const { repository, user } = await setup()
     const submit = vi.spyOn(repository, 'submit')
     await user.click(within(screen.getByRole('group', { name: CHECKLIST_PERGUNTAS.avarias })).getByLabelText('Não'))
     await user.type(screen.getByLabelText(`Observação — ${CHECKLIST_PERGUNTAS.avarias}`), 'curta')
-    await user.click(screen.getByRole('button', { name: 'Enviar para aprovação' }))
-    const response = within(screen.getByRole('group', { name: CHECKLIST_PERGUNTAS.identificacao })).getByLabelText('Sim')
-    expect(response).toHaveAttribute('aria-invalid', 'true')
-    expect(response).toHaveFocus()
-    expect(response).toHaveAccessibleDescription('Responda esta pergunta antes de enviar.')
+    const button = screen.getByRole('button', { name: 'Enviar para aprovação' })
+    expect(button).toBeDisabled()
+    await user.click(button)
     expect(screen.getByLabelText(`Observação — ${CHECKLIST_PERGUNTAS.avarias}`)).toHaveAccessibleDescription(/10 a 300/)
     expect(submit).not.toHaveBeenCalled()
+    await answerAll(user)
+    expect(button).toBeEnabled()
+    await user.clear(screen.getByLabelText('Título'))
+    expect(button).toBeDisabled()
+    await user.type(screen.getByLabelText('Título'), 'Prensa válida')
+    await user.click(within(screen.getByRole('group', { name: CHECKLIST_PERGUNTAS.avarias })).getByLabelText('Não'))
+    expect(button).toBeDisabled()
+    await user.clear(screen.getByLabelText(`Observação — ${CHECKLIST_PERGUNTAS.avarias}`))
+    await user.type(screen.getByLabelText(`Observação — ${CHECKLIST_PERGUNTAS.avarias}`), 'Avaria aparente na carenagem.')
+    expect(button).toBeEnabled()
   })
 
   it('envia alterações não salvas em uma operação e exibe o status persistido no destino', async () => {

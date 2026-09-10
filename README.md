@@ -78,7 +78,7 @@ Não há migrações porque existe apenas a versão 1. Uma versão futura exigir
 
 ## Criar uma inspeção
 
-Na página inicial, use **Nova inspeção**. Preencha título, setor, responsável e data; clique em **Salvar inspeção**. O título é validado após trim (3 a 80 caracteres). Setores e responsáveis vêm dos enums de domínio. A data deve existir no calendário, sem restrição de passado ou futuro. O formulário mantém strings potencialmente incompletas e valida com um schema derivado do domínio; não usa `Inspecao` como estado.
+Na página inicial, use **Nova inspeção**. Preencha título, setor, responsável e data; clique em **Salvar rascunho**. O título é validado após trim (3 a 80 caracteres). Setores e responsáveis vêm dos enums de domínio. A data deve existir no calendário, sem restrição de passado ou futuro. O formulário mantém strings potencialmente incompletas e valida com um schema derivado do domínio; não usa `Inspecao` como estado.
 
 A função de criação valida novamente os dados recebidos e o objeto final antes de gravar. O formulário inicia o checklist com respostas `null` e observações vazias e permite respondê-lo parcialmente, incluindo Não com observação ainda inválida. A criação persiste esse checklist, gera status `em_preenchimento`, um único evento `criacao` e timestamps iguais para criação, atualização e evento. O relógio utilizado é o do navegador.
 
@@ -88,11 +88,13 @@ Durante a gravação, o formulário e o botão ficam desabilitados e uma trava s
 
 A saída com dados não salvos exige confirmação. O React Router usa `createBrowserRouter` para suportar [bloqueio de navegação](https://reactrouter.com/api/hooks/useBlocker); recarga e fechamento da aba usam `beforeunload`. Durante a gravação, a navegação interna é bloqueada. O formulário usa o `Button` local do shadcn/ui e controles nativos com labels, mensagens associadas, foco visível e ordem de teclado. A largura foi conferida em 390 px e desktop.
 
+O botão **Enviar para aprovação** também está disponível na criação. Ele só habilita quando `submitInspectionSchema` aceita os metadados, as três respostas e as observações obrigatórias. `createAndSubmit(input)` reutiliza esse schema na camada de dados e grava a inspeção diretamente em `em_aprovacao`, com exatamente um evento `criacao` e um `envio`, em uma única escrita. Não chama `create` seguido de `submit`: falha de validação, simulação ou escrita não deixa um rascunho parcial. A operação participa da mesma fila e dos bloqueios de reset; a UI impede repetição e preserva campos em falha.
+
 ## Editar e enviar para aprovação
 
 Acesse **Editar inspeção** no placeholder. Somente inspeções `em_preenchimento` podem ser editadas ou enviadas, com verificação também na camada de dados. O rascunho aceita checklist incompleto e observações de Não ainda inválidas, preserva identidade e histórico, e atualiza `atualizadoEm` sem criar evento de edição.
 
-**Enviar para aprovação** valida os campos obrigatórios, todas as respostas e cada observação de Não após trim (10–300 caracteres). Observações de respostas Sim não são ressalvas ativas: ficam ocultas, não são exigidas nem validadas para envio, e o texto anterior é preservado caso a resposta volte a Não.
+**Enviar para aprovação** permanece desativado enquanto `submitInspectionSchema` não aceitar os campos atuais. O mesmo schema valida os campos obrigatórios, todas as respostas e cada observação de Não após trim (10–300 caracteres). Observações de respostas Sim não são ressalvas ativas: ficam ocultas, não são exigidas nem validadas para envio, e o texto anterior é preservado caso a resposta volte a Não.
 
 `submit(id)` envia o rascunho persistido; `submit(id, input)` permite enviar os campos atuais sem precisar salvá-los antes. A UI usa a segunda forma. A operação faz uma única escrita com os dados, status `em_aprovacao`, `atualizadoEm` e um evento `envio`. Falhas de validação ou gravação não mudam o snapshot confirmado. Mutações compartilham a mesma fila para impedir que envios repetidos dupliquem eventos ou que um rascunho concorrente reverta o envio.
 
@@ -163,7 +165,9 @@ Os testes ficam próximos ao código. A suíte cobre schemas, checklist, leitura
 
 Execute `npm run test:coverage`. O Vitest usa `@vitest/coverage-v8` na mesma versão do runner e reprova o comando se o conjunto medido ficar abaixo de **80% de linhas ou 80% de branches**. Os limites são globais, não por arquivo. O relatório aparece no terminal; abra `coverage/index.html` para detalhes por arquivo e branches não executados. `coverage/coverage-summary.json` contém os números para processamento automático. Relatórios gerados não são versionados.
 
-Medição com a suíte atual (211 testes), após o redesign da listagem e a ordenação: **98,12% de linhas (418/426)** e **87,74% de branches (272/310)**. A baseline anterior tinha 206 testes, 97,87% de linhas e 86,36% de branches. A primeira medição já passou os limites; nenhum teste foi acrescentado apenas para aumentar o percentual. Restam caminhos alternativos de UI, como saída da página/aba e alguns estados de erro. Os componentes de criação, edição e revisão têm branches abaixo de 80% individualmente; o requisito é aplicado ao conjunto declarado. Repositório, storage e simulador têm 100% de linhas e branches nesta medição.
+Baseline antes do envio direto (211 testes), após o redesign da listagem e a ordenação: **98,12% de linhas (418/426)** e **87,74% de branches (272/310)**. A baseline anterior tinha 206 testes, 97,87% de linhas e 86,36% de branches. A primeira medição já passou os limites; nenhum teste foi acrescentado apenas para aumentar o percentual. Restam caminhos alternativos de UI, como saída da página/aba e alguns estados de erro. Os componentes de criação, edição e revisão têm branches abaixo de 80% individualmente; o requisito é aplicado ao conjunto declarado. Repositório, storage e simulador têm 100% de linhas e branches nesta medição.
+
+Após o envio direto e o bloqueio de envio inválido na edição, a suíte tem **226 testes**, **98,15% de linhas (426/434)** e **88,44% de branches (291/329)**, mantendo o escopo e os limites anteriores.
 
 O `coverage.include` em `vite.config.ts` inclui arquivos correspondentes mesmo quando não importados por nenhum teste. O escopo é:
 

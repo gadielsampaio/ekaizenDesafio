@@ -61,6 +61,7 @@ function EditInspectionForm({ inspection, repository }: { inspection: Inspecao; 
   const submitted = useRef(false)
   const formRef = useRef<HTMLFormElement>(null)
   const dirty = JSON.stringify(values) !== JSON.stringify(editableFields(confirmed))
+  const canSubmit = submitInspectionSchema.safeParse(values).success
   const blocker = useBlocker(() => !submitted.current && (dirty || processing.current))
 
   useBeforeUnload((event) => {
@@ -125,7 +126,7 @@ function EditInspectionForm({ inspection, repository }: { inspection: Inspecao; 
       {pending && <p role="status">{pending === 'save' ? 'Salvando alterações…' : 'Enviando para aprovação…'}</p>}
       <div className="flex flex-wrap gap-3">
         <Button type="submit" disabled={pending !== null}>{pending === 'save' ? 'Salvando…' : 'Salvar alterações'}</Button>
-        <Button type="button" disabled={pending !== null} onClick={() => { void persist('submit') }}>
+        <Button type="button" disabled={pending !== null || !canSubmit} onClick={() => { void persist('submit') }}>
           {pending === 'submit' ? 'Enviando…' : 'Enviar para aprovação'}
         </Button>
         <Button type="button" variant="outline" disabled={pending !== null} onClick={() => navigate(`/inspecoes/${encodeURIComponent(inspection.id)}${search}`)}>Cancelar</Button>

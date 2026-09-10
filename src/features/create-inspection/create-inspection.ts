@@ -2,12 +2,14 @@ import type { CreateInspectionInput } from '@/shared/contracts/inspection-reposi
 import { inspecaoSchema } from '@/shared/domain/inspection-schemas'
 import type { createInspectionStorage } from '@/shared/storage/inspection-storage'
 import { createInspectionSchema } from './create-inspection-schema'
+import { submitInspectionSchema } from '@/features/edit-inspection/edit-inspection-schema'
 
 export async function createInspection(
   storage: ReturnType<typeof createInspectionStorage>,
   input: CreateInspectionInput,
+  action: 'draft' | 'submit' = 'draft',
 ) {
-  const fields = createInspectionSchema.parse(input)
+  const fields = (action === 'submit' ? submitInspectionSchema : createInspectionSchema).parse(input)
   const { inspections } = await storage.read()
   const ids = new Set(inspections.map((inspection) => inspection.id))
   const protocols = new Set(inspections.map((inspection) => inspection.protocolo))
@@ -23,12 +25,16 @@ export async function createInspection(
   }
 
   const now = new Date().toISOString()
+  const creationEvent = { id: `${id}:criacao`, tipo: 'criacao' as const, dataHora: now }
+  const historico = action === 'submit'
+    ? [creationEvent, { id: `${id}:envio:2`, tipo: 'envio' as const, dataHora: now }]
+    : [creationEvent]
   const inspection = inspecaoSchema.parse({
     ...fields,
     id,
     protocolo,
-    status: 'em_preenchimento',
-    historico: [{ id: `${id}:criacao`, tipo: 'criacao', dataHora: now }],
+    status: action === 'submit' ? 'em_aprovacao' : 'em_preenchimento',
+    historico,
     criadoEm: now,
     atualizadoEm: now,
   })

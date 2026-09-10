@@ -155,3 +155,72 @@ describe('criação pelo repositório concreto', () => {
     expect(localStorage.getItem(INSPECTION_STORAGE_KEY)).toBe('{')
   })
 })
+
+
+function completeInput(): CreateInspectionInput {
+  const checklist = criarChecklistVazio()
+  checklist.identificacao.resposta = 'sim'
+  checklist.avarias = { resposta: 'nao', observacao: '  Avaria aparente na carenagem.  ' }
+  checklist.protecoes.resposta = 'sim'
+  return { ...input, checklist }
+}
+
+describe('criação com envio atômico', () => {
+  it('grava uma vez com status final, dois eventos únicos e observações normalizadas', async () => {
+    const storage = createInspectionStorage(localStorage)
+    const repository = createLocalInspectionRepository(storage)
+    const data = completeInput()
+    const before = structuredClone(data)
+    const write = vi.spyOn(Storage.prototype, 'setItem')
+    const inspection = await repository.createAndSubmit(data)
+    expect(write).toHaveBeenCalledTimes(1)
+    expect(inspection.status).toBe('em_aprovacao')
+    expect(inspection.checklist.avarias.observacao).toBe('Avaria aparente na carenagem.')
+    expect(inspection.historico).toEqual([
+      { id: `${inspection.id}:criacao`, tipo: 'criacao', dataHora: inspection.criadoEm },
+      { id: `${inspection.id}:envio:2`, tipo: 'envio', dataHora: inspection.criadoEm },
+    ])
+    expect(data).toEqual(before)
+    const reloaded = createLocalInspectionRepository(createInspectionStorage(localStorage))
+    await expect(reloaded.findById(inspection.id)).resolves.toEqual(inspection)
+    const snapshot = localStorage.getItem(INSPECTION_STORAGE_KEY)
+    await expect(repository.submit(inspection.id)).rejects.toThrow()
+    expect(localStorage.getItem(INSPECTION_STORAGE_KEY)).toBe(snapshot)
+  })
+
+  it.each(['metadata', 'resposta', 'vazia', 'espacos', 'curta', 'longa'] as const)('recusa %s inválida sem criar cadastro parcial', async (invalid) => {
+    const repository = createLocalInspectionRepository(createInspectionStorage(localStorage))
+    const data = completeInput()
+    if (invalid === 'metadata') data.dataInspecao = '2026-02-29'
+    else if (invalid === 'resposta') data.checklist.protecoes.resposta = null
+    else data.checklist.avarias.observacao = { vazia: '', espacos: '  ', curta: '  curta  ', longa: 'x'.repeat(301) }[invalid]
+    const write = vi.spyOn(Storage.prototype, 'setItem')
+    await expect(repository.createAndSubmit(data)).rejects.toThrow()
+    expect(write).not.toHaveBeenCalled()
+    expect(localStorage.getItem(INSPECTION_STORAGE_KEY)).toBeNull()
+  })
+
+  it.each([false, true])('preserva storage em falha de escrita e permite repetir (dados prévios: %s)', async (existing) => {
+    const storage = createInspectionStorage(localStorage)
+    const repository = createLocalInspectionRepository(storage)
+    if (existing) await repository.create(input)
+    const before = localStorage.getItem(INSPECTION_STORAGE_KEY)
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementationOnce(() => { throw new Error('Sem espaço') })
+    await expect(repository.createAndSubmit(completeInput())).rejects.toThrow('Sem espaço')
+    expect(localStorage.getItem(INSPECTION_STORAGE_KEY)).toBe(before)
+    const inspection = await repository.createAndSubmit(completeInput())
+    expect(inspection.status).toBe('em_aprovacao')
+    expect(inspection.historico.map((event) => event.tipo)).toEqual(['criacao', 'envio'])
+    expect((await storage.read()).inspections).toHaveLength(existing ? 2 : 1)
+  })
+
+  it('serializa criação simples e envio direto sem colisão ou perda de dados', async () => {
+    const storage = createInspectionStorage(localStorage)
+    const repository = createLocalInspectionRepository(storage)
+    const records = await Promise.all([repository.create(input), repository.createAndSubmit(completeInput()), repository.createAndSubmit(completeInput())])
+    expect(new Set(records.map((item) => item.id)).size).toBe(3)
+    expect(new Set(records.map((item) => item.protocolo)).size).toBe(3)
+    expect(records.map((item) => item.historico.length)).toEqual([1, 2, 2])
+    expect((await storage.read()).inspections).toEqual(records)
+  })
+})

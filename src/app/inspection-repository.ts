@@ -49,6 +49,9 @@ export function createLocalInspectionRepository(
     create(input) {
       return enqueueMutation(() => createInspection(storage, input))
     },
+    createAndSubmit(input) {
+      return enqueueMutation(() => createInspection(storage, input, 'submit'))
+    },
     saveDraft(id, input) {
       return enqueueMutation(() => saveInspectionDraft(storage, id, input))
     },
