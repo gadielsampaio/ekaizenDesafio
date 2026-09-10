@@ -3,7 +3,7 @@ import type { ChecklistId, RespostaItemChecklist } from '@/shared/domain/inspect
 import { checklistIdSchema, responsavelSchema, setorSchema } from '@/shared/domain/inspection-schemas'
 import type { InspectionFormValues, InspectionFormErrors } from '@/shared/lib/inspection-form'
 
-const controlClass = 'h-11 w-full min-w-0 rounded-md border border-input bg-background px-3 text-base outline-none focus-visible:ring-2 focus-visible:ring-ring aria-invalid:border-destructive'
+const controlClass = 'field-control'
 
 export function InspectionFields({ values, errors, disabled, onChange }: {
   values: InspectionFormValues
@@ -24,12 +24,13 @@ export function InspectionFields({ values, errors, disabled, onChange }: {
 
   return (
     <>
-        <fieldset disabled={disabled} className="min-w-0 space-y-5 disabled:opacity-70">
+        <fieldset disabled={disabled} className="surface space-y-5 disabled:opacity-70">
           <legend className="sr-only">Dados da inspeção</legend>
+          <h2 className="font-semibold">Dados da inspeção</h2>
           <div className="space-y-2">
             <label htmlFor="titulo" className="block text-sm font-medium">Título</label>
             <input
-              id="titulo" name="titulo" required value={values.titulo}
+              id="titulo" name="titulo" placeholder="Ex.: Empilhadeira 06" required value={values.titulo}
               onChange={(event) => updateField('titulo', event.target.value)}
               aria-invalid={Boolean(errors.titulo)}
               aria-describedby={errors.titulo ? 'titulo-help titulo-error' : 'titulo-help'}
@@ -78,40 +79,44 @@ export function InspectionFields({ values, errors, disabled, onChange }: {
             {errors.dataInspecao && <p id="data-error" className="text-sm text-destructive">{errors.dataInspecao}</p>}
           </div>
         </fieldset>
-        <fieldset disabled={disabled} aria-describedby="checklist-help" className="min-w-0 space-y-5 disabled:opacity-70">
-          <legend className="text-lg font-semibold">Checklist</legend>
+        <fieldset disabled={disabled} aria-describedby="checklist-help" className="surface space-y-5 disabled:opacity-70">
+          <legend className="sr-only">Checklist</legend>
+          <h2 className="font-semibold">Checklist</h2>
           <p id="checklist-help" className="text-sm text-muted-foreground">Você pode salvar sem responder a todas as perguntas.</p>
           {checklistIdSchema.options.map((id) => {
             const item = values.checklist[id]
             return (
-              <fieldset key={id} className="min-w-0 space-y-3 rounded-md border p-4">
-                <legend className="px-1 text-sm font-medium">{CHECKLIST_PERGUNTAS[id]}</legend>
-                <div className="flex gap-6">
-                  <label className="flex min-h-11 cursor-pointer items-center gap-2">
+              <fieldset key={id} className="min-w-0 space-y-4 rounded-xl border p-4">
+                <legend className="sr-only">{CHECKLIST_PERGUNTAS[id]}</legend>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <p aria-hidden="true" className="text-sm font-medium">{CHECKLIST_PERGUNTAS[id]}</p>
+                <div className="flex w-fit gap-1 rounded-lg bg-neutral-100 p-1">
+                  <label className="relative cursor-pointer">
                     <input
                       type="radio" aria-invalid={Boolean(errors[`checklist.${id}.resposta`])} aria-describedby={errors[`checklist.${id}.resposta`] ? `resposta-${id}-error` : undefined}
                       name={`checklist-${id}`} value="sim" checked={item.resposta === 'sim'}
                       onChange={() => updateChecklistItem(id, { resposta: 'sim' })}
-                      className="size-4 accent-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                      className="peer sr-only"
                     />
-                    Sim
+                    <span className="flex min-h-11 min-w-14 items-center justify-center rounded-md px-3 text-sm text-muted-foreground peer-checked:bg-white peer-checked:font-semibold peer-checked:text-foreground peer-focus-visible:outline-2 peer-focus-visible:outline-ring peer-disabled:opacity-50">Sim</span>
                   </label>
-                  <label className="flex min-h-11 cursor-pointer items-center gap-2">
+                  <label className="relative cursor-pointer">
                     <input
                       type="radio" aria-invalid={Boolean(errors[`checklist.${id}.resposta`])} aria-describedby={errors[`checklist.${id}.resposta`] ? `resposta-${id}-error` : undefined}
                       name={`checklist-${id}`} value="nao" checked={item.resposta === 'nao'}
                       onChange={() => updateChecklistItem(id, { resposta: 'nao' })}
-                      className="size-4 accent-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                      className="peer sr-only"
                     />
-                    Não
+                    <span className="flex min-h-11 min-w-14 items-center justify-center rounded-md px-3 text-sm text-muted-foreground peer-checked:bg-white peer-checked:font-semibold peer-checked:text-foreground peer-focus-visible:outline-2 peer-focus-visible:outline-ring peer-disabled:opacity-50">Não</span>
                   </label>
+                </div>
                 </div>
                 {errors[`checklist.${id}.resposta`] && <p id={`resposta-${id}-error`} className="text-sm text-destructive">{errors[`checklist.${id}.resposta`]}</p>}
                 {item.resposta === 'nao' && (
                   <div className="space-y-2">
                     <label htmlFor={`observacao-${id}`} className="block text-sm font-medium">Observação — {CHECKLIST_PERGUNTAS[id]}</label>
                     <textarea
-                      id={`observacao-${id}`} name={`observacao-${id}`} rows={3} value={item.observacao}
+                      id={`observacao-${id}`} name={`observacao-${id}`} placeholder="Descreva o problema encontrado." rows={3} value={item.observacao}
                       aria-invalid={Boolean(errors[`checklist.${id}.observacao`])}
                       aria-describedby={errors[`checklist.${id}.observacao`] ? `observacao-${id}-error` : `observacao-${id}-help`}
                       onChange={(event) => updateChecklistItem(id, { observacao: event.target.value })}

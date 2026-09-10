@@ -4,6 +4,8 @@ import type { InspectionRepository } from '@/shared/contracts/inspection-reposit
 import type { Inspecao } from '@/shared/domain/inspection'
 import { getInspectionFormErrors, type InspectionFormErrors, type InspectionFormValues } from '@/shared/lib/inspection-form'
 import { Button } from '@/shared/ui/button'
+import { InspectionFormShell } from '@/shared/ui/inspection-form-shell'
+import { BackToInspections } from '@/shared/ui/back-to-inspections'
 import { InspectionFields } from '@/shared/ui/inspection-fields'
 import { saveDraftSchema, submitInspectionSchema } from './edit-inspection-schema'
 
@@ -25,17 +27,17 @@ export function EditInspectionPage({ repository }: { repository: Repository }) {
     return () => { active = false }
   }, [id, repository, attempt])
 
-  if (state.status === 'loading') return <p role="status">Carregando inspeção…</p>
+  if (state.status === 'loading') return <><BackToInspections /><p role="status">Carregando inspeção…</p></>
   if (state.status === 'error') {
     return <>
-      <p role="alert">Não foi possível carregar a inspeção.</p>
+      <BackToInspections /><p className="notice border-red-200 bg-red-50 text-red-900" role="alert">Não foi possível carregar a inspeção.</p>
       <Button onClick={() => { setState({ status: 'loading' }); setAttempt((value) => value + 1) }}>Tentar novamente</Button>
     </>
   }
-  if (!state.inspection) return <h1 className="text-2xl font-semibold">Inspeção não encontrada</h1>
+  if (!state.inspection) return <><BackToInspections /><h1 className="text-2xl font-semibold">Inspeção não encontrada</h1></>
   if (state.inspection.status !== 'em_preenchimento') {
     return <>
-      <h1 className="text-2xl font-semibold">Edição indisponível</h1>
+      <BackToInspections /><h1 className="text-2xl font-semibold">Edição indisponível</h1>
       <p>Somente inspeções em preenchimento podem ser alteradas ou enviadas.</p>
       <Link className="underline" to={`/inspecoes/${encodeURIComponent(id)}${search}`}>Voltar à inspeção</Link>
     </>
@@ -108,11 +110,7 @@ function EditInspectionForm({ inspection, repository }: { inspection: Inspecao; 
     }
   }
 
-  return <>
-    <header className="space-y-2">
-      <h1 className="text-3xl font-semibold tracking-tight">Editar inspeção</h1>
-      <p>{confirmed.protocolo} · Em preenchimento</p>
-    </header>
+  return <InspectionFormShell title="Editar inspeção" description={`${confirmed.protocolo} · Em preenchimento`}>
     <form ref={formRef} noValidate aria-busy={pending !== null} className="space-y-6" onSubmit={(event) => {
       event.preventDefault()
       void persist('save')
@@ -121,16 +119,16 @@ function EditInspectionForm({ inspection, repository }: { inspection: Inspecao; 
         setValues(next)
         setSuccess(false)
       }} />
-      {failure && <p role="alert" className="text-sm text-destructive">Não foi possível concluir a operação. Suas alterações foram mantidas. Tente novamente.</p>}
-      {success && <p role="status">Alterações salvas.</p>}
+      {failure && <p role="alert" className="notice border-red-200 bg-red-50 text-red-900">Não foi possível concluir a operação. Suas alterações foram mantidas. Tente novamente.</p>}
+      {success && <p className="notice border-emerald-200 bg-emerald-50 text-emerald-900" role="status">Alterações salvas.</p>}
       {pending && <p role="status">{pending === 'save' ? 'Salvando alterações…' : 'Enviando para aprovação…'}</p>}
-      <div className="flex flex-wrap gap-3">
-        <Button type="submit" disabled={pending !== null}>{pending === 'save' ? 'Salvando…' : 'Salvar alterações'}</Button>
+      <div className="form-actions">
+        <Button type="submit" variant="outline" disabled={pending !== null}>{pending === 'save' ? 'Salvando…' : 'Salvar alterações'}</Button>
         <Button type="button" disabled={pending !== null || !canSubmit} onClick={() => { void persist('submit') }}>
           {pending === 'submit' ? 'Enviando…' : 'Enviar para aprovação'}
         </Button>
-        <Button type="button" variant="outline" disabled={pending !== null} onClick={() => navigate(`/inspecoes/${encodeURIComponent(inspection.id)}${search}`)}>Cancelar</Button>
+        <Button type="button" variant="ghost" disabled={pending !== null} onClick={() => navigate(`/inspecoes/${encodeURIComponent(inspection.id)}${search}`)}>Cancelar</Button>
       </div>
     </form>
-  </>
+  </InspectionFormShell>
 }

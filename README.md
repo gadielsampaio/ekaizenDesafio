@@ -148,7 +148,7 @@ Para testar corrupção manualmente, nas ferramentas do navegador altere apenas 
 
 ## UI e testes
 
-A fundação visual usa o container responsivo do redesign, fundo neutro e botões com altura mínima de 44 px no tamanho padrão. As classes compartilhadas `surface`, `field-control`, `notice` e `form-actions` centralizam a apresentação. O componente `BackToInspections` preserva os parâmetros da URL e será aplicado às telas durante a migração incremental.
+A fundação visual usa o container responsivo do redesign, fundo neutro e botões com altura mínima de 44 px no tamanho padrão. As classes compartilhadas `surface`, `field-control`, `notice` e `form-actions` centralizam a apresentação. O componente `BackToInspections` preserva os parâmetros da URL. Criação e edição usam `InspectionFormShell` com cabeçalho alinhado ao shell externo e conteúdo de até 48 rem. O checklist usa controles segmentados com radios nativos, foco visível e navegação por setas; a observação permanece junto à pergunta. Os botões preservam a ordem de teclado e compartilham a disposição responsiva. As confirmações de descarte e os anúncios de carregamento, erro e sucesso permanecem disponíveis.
 
 Tailwind usa o plugin de Vite. O shadcn/ui foi configurado manualmente com `components.json`, aliases `@/*`, tokens CSS e um `Button` local baseado no padrão new-york. Radix Slot permite compor o botão com links; `class-variance-authority`, `clsx` e `tailwind-merge` suportam variantes e classes. Novos componentes podem ser adicionados conforme forem necessários:
 

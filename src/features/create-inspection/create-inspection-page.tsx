@@ -4,6 +4,7 @@ import type { InspectionRepository } from '@/shared/contracts/inspection-reposit
 import { criarChecklistVazio } from '@/shared/domain/checklist'
 import { checklistIdSchema } from '@/shared/domain/inspection-schemas'
 import { Button } from '@/shared/ui/button'
+import { InspectionFormShell } from '@/shared/ui/inspection-form-shell'
 import { InspectionFields } from '@/shared/ui/inspection-fields'
 import { getInspectionFormErrors, type InspectionFormValues, type InspectionFormErrors } from '@/shared/lib/inspection-form'
 import { submitInspectionSchema } from '@/features/edit-inspection/edit-inspection-schema'
@@ -85,25 +86,21 @@ export function CreateInspectionPage({ repository }: {
   }
 
   return (
-    <>
-      <header className="space-y-2">
-        <h1 className="text-3xl font-semibold tracking-tight">Nova inspeção</h1>
-        <p className="text-muted-foreground">Identifique o equipamento. Título, setor, responsável e data são obrigatórios.</p>
-      </header>
+    <InspectionFormShell title="Nova inspeção" description="Título, setor, responsável e data são obrigatórios.">
       <form ref={formRef} noValidate onSubmit={handleSubmit} className="space-y-6" aria-busy={isSaving}>
         <InspectionFields values={values} errors={errors} disabled={isSaving} onChange={setValues} />
         {failure && (
-          <p role="alert" className="text-sm text-destructive">
+          <p role="alert" className="notice border-red-200 bg-red-50 text-red-900">
             Não foi possível salvar a inspeção. Seus dados foram mantidos. Tente salvar novamente.
           </p>
         )}
-        <div className="flex flex-wrap gap-3">
-          <Button type="submit" disabled={isSaving}>{pending === 'draft' ? 'Salvando…' : 'Salvar rascunho'}</Button>
+        <div className="form-actions">
+          <Button type="submit" variant="outline" disabled={isSaving}>{pending === 'draft' ? 'Salvando…' : 'Salvar rascunho'}</Button>
           <Button type="button" disabled={isSaving || !canSubmit} onClick={() => { void persist('submit') }}>{pending === 'submit' ? 'Enviando…' : 'Enviar para aprovação'}</Button>
-          <Button type="button" variant="outline" disabled={isSaving} onClick={() => navigate('/')}>Cancelar</Button>
+          <Button type="button" variant="ghost" disabled={isSaving} onClick={() => navigate('/')}>Cancelar</Button>
         </div>
         {isSaving && <p role="status" className="text-sm text-muted-foreground">{pending === 'submit' ? 'Enviando para aprovação…' : 'Salvando inspeção…'}</p>}
       </form>
-    </>
+    </InspectionFormShell>
   )
 }
