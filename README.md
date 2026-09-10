@@ -129,7 +129,7 @@ em_aprovacao → reprovar → reprovada
 reprovada → reabrir → em_preenchimento
 ```
 
-Permanecem pendentes: detalhe completo. A recuperação explícita e o simulador estão implementados. Permanecem pendentes a configuração e aferição da cobertura mínima de 80% de linhas e branches das regras/dados e os entregáveis finais de publicação.
+Permanecem pendentes: detalhe completo. A recuperação explícita e o simulador estão implementados. Permanecem pendentes os entregáveis finais de publicação.
 
 ## Simular atraso, falha e restaurar dados
 
@@ -152,4 +152,24 @@ npx shadcn@latest add input
 
 Referências da configuração: [shadcn/ui com Vite](https://ui.shadcn.com/docs/installation/vite), [Tailwind com Vite](https://tailwindcss.com/docs/installation/using-vite) e [Vitest](https://vitest.dev/guide/).
 
-Os testes ficam próximos ao código. A suíte cobre schemas, checklist, leitura e escrita no localStorage do jsdom, corrupção, versões incompatíveis, falhas de acesso e quota, preservação de dados e histórico em escrita inválida e navegação com React Testing Library + user-event. Os testes do slice também cobrem cadastro válido, entradas inválidas, estado inicial, histórico único, persistência após recarga, colisões e chamadas concorrentes, envio repetido, erros associados aos campos, ordem de foco, descarte confirmado e nova tentativa após falha. Os testes de edição cobrem rascunhos incompletos, envio atômico, limites das observações, bloqueio por estado, concorrência, falhas sem perda de dados e comportamento do formulário. Os testes de revisão cobrem decisões, motivos inválidos, cancelamento, concorrência e falhas sem perda de dados. Os testes de reabertura cobrem estados inválidos, repetição, preservação do histórico e checklist, falha com nova tentativa e retomada da edição. Não há percentual de cobertura aferido nesta etapa.
+Os testes ficam próximos ao código. A suíte cobre schemas, checklist, leitura e escrita no localStorage do jsdom, corrupção, versões incompatíveis, falhas de acesso e quota, preservação de dados e histórico em escrita inválida e navegação com React Testing Library + user-event. Os testes do slice também cobrem cadastro válido, entradas inválidas, estado inicial, histórico único, persistência após recarga, colisões e chamadas concorrentes, envio repetido, erros associados aos campos, ordem de foco, descarte confirmado e nova tentativa após falha. Os testes de edição cobrem rascunhos incompletos, envio atômico, limites das observações, bloqueio por estado, concorrência, falhas sem perda de dados e comportamento do formulário. Os testes de revisão cobrem decisões, motivos inválidos, cancelamento, concorrência e falhas sem perda de dados. Os testes de reabertura cobrem estados inválidos, repetição, preservação do histórico e checklist, falha com nova tentativa e retomada da edição. A cobertura é aferida conforme o escopo abaixo.
+
+
+## Cobertura das regras e dados
+
+Execute `npm run test:coverage`. O Vitest usa `@vitest/coverage-v8` na mesma versão do runner e reprova o comando se o conjunto medido ficar abaixo de **80% de linhas ou 80% de branches**. Os limites são globais, não por arquivo. O relatório aparece no terminal; abra `coverage/index.html` para detalhes por arquivo e branches não executados. `coverage/coverage-summary.json` contém os números para processamento automático. Relatórios gerados não são versionados.
+
+Medição com a suíte atual (206 testes): **97,87% de linhas (414/423)** e **86,36% de branches (247/286)**. A primeira medição já passou os limites; nenhum teste foi acrescentado apenas para aumentar o percentual. Restam caminhos alternativos de UI, como saída da página/aba e alguns estados de erro. Os componentes de criação, edição e revisão têm branches abaixo de 80% individualmente; o requisito é aplicado ao conjunto declarado. Repositório, storage e simulador têm 100% de linhas e branches nesta medição.
+
+O `coverage.include` em `vite.config.ts` inclui arquivos correspondentes mesmo quando não importados por nenhum teste. O escopo é:
+
+| Caminho | Conteúdo incluído |
+| --- | --- |
+| `src/app/inspection-repository.ts` | Composição das operações, fila e bloqueio de reset |
+| `src/features/**/*.{ts,tsx}` | Todos os slices: criação, edição/envio, revisão, reabertura, listagem/seed e recuperação; inclui schemas e componentes com validações/bloqueios |
+| `src/shared/domain/**/*.ts` | Schemas de domínio, checklist e tipos |
+| `src/shared/contracts/**/*.ts` | Contratos de persistência |
+| `src/shared/storage/**/*.ts` | Envelope, validação, leitura, escrita, reset e simulação |
+| `src/shared/lib/inspection-form.ts` | Tradução de erros de validação do formulário |
+
+A única exclusão dentro desses padrões é `**/*.test.{ts,tsx}`. Arquivos que contêm somente tipos/interfaces não geram instruções executáveis; podem aparecer com totais zero e não alteram o denominador. Ficam fora do escopo entrada/rotas de composição, CSS, componentes compartilhados de apresentação, utilitário de classes, fixtures e setup de testes. Nenhuma regra de negócio ou operação de persistência foi excluída. Os componentes dos slices foram mantidos no escopo para também medir suas validações e proteções de interação.
