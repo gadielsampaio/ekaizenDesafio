@@ -1,5 +1,6 @@
 import type { ZodError } from 'zod'
 import type { Checklist } from '@/shared/domain/inspection'
+import { checklistIdSchema } from '@/shared/domain/inspection-schemas'
 
 export interface InspectionFormValues {
   titulo: string
@@ -25,4 +26,11 @@ export function getInspectionFormErrors(error: ZodError): InspectionFormErrors {
     errors[field] = metadataMessages[field] ?? issue.message
   }
   return errors
+}
+
+export function getPendingChecklistIds(error: ZodError | undefined) {
+  if (!error) return []
+  return checklistIdSchema.options.filter((id) => error.issues.some((issue) => (
+    issue.path[0] === 'checklist' && issue.path[1] === id
+  )))
 }

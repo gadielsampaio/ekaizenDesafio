@@ -8,7 +8,7 @@ import { InspectionFormShell } from '@/shared/ui/inspection-form-shell'
 import { InspectionFields } from '@/shared/ui/inspection-fields'
 import { Spinner } from '@/shared/ui/spinner'
 import { ConfirmationDialog } from '@/shared/ui/confirmation-dialog'
-import { getInspectionFormErrors, type InspectionFormValues, type InspectionFormErrors } from '@/shared/lib/inspection-form'
+import { getInspectionFormErrors, getPendingChecklistIds, type InspectionFormValues, type InspectionFormErrors } from '@/shared/lib/inspection-form'
 import { submitInspectionSchema } from '@/features/edit-inspection/edit-inspection-schema'
 import { createInspectionSchema } from './create-inspection-schema'
 
@@ -27,7 +27,9 @@ export function CreateInspectionPage({ repository }: {
   const [failure, setFailure] = useState(false)
   const [pending, setPending] = useState<'draft' | 'submit' | null>(null)
   const isSaving = pending !== null
-  const canSubmit = submitInspectionSchema.safeParse(values).success
+  const submission = submitInspectionSchema.safeParse(values)
+  const canSubmit = submission.success
+  const pendingChecklist = getPendingChecklistIds(submission.success ? undefined : submission.error)
   const processing = useRef(false)
   const saved = useRef(false)
   const formRef = useRef<HTMLFormElement>(null)
@@ -84,7 +86,7 @@ export function CreateInspectionPage({ repository }: {
   return (
     <InspectionFormShell title="Nova inspeção" description="Título, setor, responsável e data são obrigatórios.">
       <form ref={formRef} noValidate onSubmit={handleSubmit} className="space-y-6" aria-busy={isSaving}>
-        <InspectionFields values={values} errors={errors} disabled={isSaving} onChange={setValues} />
+        <InspectionFields values={values} errors={errors} pendingChecklist={pendingChecklist} disabled={isSaving} onChange={setValues} />
         {failure && (
           <p role="alert" className="notice border-red-200 bg-red-50 text-red-900">
             Não foi possível salvar a inspeção. Seus dados foram mantidos. Tente salvar novamente.

@@ -5,9 +5,10 @@ import type { InspectionFormValues, InspectionFormErrors } from '@/shared/lib/in
 
 const controlClass = 'field-control'
 
-export function InspectionFields({ values, errors, disabled, onChange }: {
+export function InspectionFields({ values, errors, pendingChecklist, disabled, onChange }: {
   values: InspectionFormValues
   errors: InspectionFormErrors
+  pendingChecklist: readonly ChecklistId[]
   disabled: boolean
   onChange: (values: InspectionFormValues) => void
 }) {
@@ -85,8 +86,10 @@ export function InspectionFields({ values, errors, disabled, onChange }: {
           <p id="checklist-help" className="text-sm text-muted-foreground">Você pode salvar sem responder a todas as perguntas.</p>
           {checklistIdSchema.options.map((id) => {
             const item = values.checklist[id]
+            const pending = pendingChecklist.includes(id)
+            const pendingId = `checklist-${id}-pending`
             return (
-              <fieldset key={id} className="min-w-0 space-y-4 rounded-xl border p-4">
+              <fieldset key={id} aria-describedby={pending ? pendingId : undefined} className="min-w-0 space-y-4 rounded-xl border p-4">
                 <legend className="sr-only">{CHECKLIST_PERGUNTAS[id]}</legend>
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <p aria-hidden="true" className="text-sm font-medium">{CHECKLIST_PERGUNTAS[id]}</p>
@@ -111,6 +114,7 @@ export function InspectionFields({ values, errors, disabled, onChange }: {
                   </label>
                 </div>
                 </div>
+                {pending && <p id={pendingId} className="text-xs font-medium text-amber-800">Pendente para envio.</p>}
                 {errors[`checklist.${id}.resposta`] && <p id={`resposta-${id}-error`} className="text-sm text-destructive">{errors[`checklist.${id}.resposta`]}</p>}
                 {item.resposta === 'nao' && (
                   <div className="space-y-2">

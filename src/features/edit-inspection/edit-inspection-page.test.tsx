@@ -66,6 +66,7 @@ describe('edição e envio pela interface', () => {
     await user.type(screen.getByLabelText(`Observação — ${CHECKLIST_PERGUNTAS.avarias}`), 'curta')
     const button = screen.getByRole('button', { name: 'Enviar para aprovação' })
     expect(button).toBeDisabled()
+    expect(within(screen.getByRole('group', { name: CHECKLIST_PERGUNTAS.avarias })).getByText('Pendente para envio.')).toBeInTheDocument()
     await user.click(button)
     expect(screen.getByLabelText(`Observação — ${CHECKLIST_PERGUNTAS.avarias}`)).toHaveAccessibleDescription(/10 a 300/)
     expect(submit).not.toHaveBeenCalled()
@@ -79,6 +80,7 @@ describe('edição e envio pela interface', () => {
     await user.clear(screen.getByLabelText(`Observação — ${CHECKLIST_PERGUNTAS.avarias}`))
     await user.type(screen.getByLabelText(`Observação — ${CHECKLIST_PERGUNTAS.avarias}`), 'Avaria aparente na carenagem.')
     expect(button).toBeEnabled()
+    expect(screen.queryByText('Pendente para envio.')).not.toBeInTheDocument()
   })
 
   it('envia alterações não salvas em uma operação e exibe o status persistido no destino', async () => {

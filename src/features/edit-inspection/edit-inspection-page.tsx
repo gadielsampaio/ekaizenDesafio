@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useBlocker, useNavigate, useParams } from 'react-router-dom'
 import type { InspectionRepository } from '@/shared/contracts/inspection-repository'
 import type { Inspecao } from '@/shared/domain/inspection'
-import { getInspectionFormErrors, type InspectionFormErrors, type InspectionFormValues } from '@/shared/lib/inspection-form'
+import { getInspectionFormErrors, getPendingChecklistIds, type InspectionFormErrors, type InspectionFormValues } from '@/shared/lib/inspection-form'
 import { Button } from '@/shared/ui/button'
 import { InspectionFormShell } from '@/shared/ui/inspection-form-shell'
 import { BackToInspections } from '@/shared/ui/back-to-inspections'
@@ -66,7 +66,9 @@ function EditInspectionForm({ inspection, repository }: { inspection: Inspecao; 
   const formRef = useRef<HTMLFormElement>(null)
   const navigationOrigin = useRef<HTMLElement | null>(null)
   const dirty = JSON.stringify(values) !== JSON.stringify(editableFields(confirmed))
-  const canSubmit = submitInspectionSchema.safeParse(values).success
+  const submission = submitInspectionSchema.safeParse(values)
+  const canSubmit = submission.success
+  const pendingChecklist = getPendingChecklistIds(submission.success ? undefined : submission.error)
   const blocker = useBlocker(() => !submitted.current && (dirty || processing.current))
 
   useEffect(() => {
@@ -115,7 +117,7 @@ function EditInspectionForm({ inspection, repository }: { inspection: Inspecao; 
       event.preventDefault()
       void persist('save')
     }}>
-      <InspectionFields values={values} errors={errors} disabled={pending !== null} onChange={(next) => {
+      <InspectionFields values={values} errors={errors} pendingChecklist={pendingChecklist} disabled={pending !== null} onChange={(next) => {
         setValues(next)
         setSuccess(false)
       }} />

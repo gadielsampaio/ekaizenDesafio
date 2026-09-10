@@ -259,12 +259,17 @@ describe('envio direto pela criação', () => {
     await fillForm(user)
     expect(button).toBeDisabled()
     for (const question of Object.values(CHECKLIST_PERGUNTAS)) {
+      expect(within(screen.getByRole('group', { name: question })).getByText('Pendente para envio.')).toBeInTheDocument()
+    }
+    for (const question of Object.values(CHECKLIST_PERGUNTAS)) {
       await user.click(within(screen.getByRole('group', { name: question })).getByLabelText('Sim'))
     }
+    expect(screen.queryByText('Pendente para envio.')).not.toBeInTheDocument()
     expect(button).toBeEnabled()
     const avarias = within(screen.getByRole('group', { name: CHECKLIST_PERGUNTAS.avarias }))
     await user.click(avarias.getByLabelText('Não'))
     const observation = screen.getByLabelText(`Observação — ${CHECKLIST_PERGUNTAS.avarias}`)
+    expect(avarias.getByText('Pendente para envio.')).toBeInTheDocument()
     for (const text of ['', '   ', '123456789', 'a'.repeat(301)]) {
       fireEvent.change(observation, { target: { value: text } })
       expect(button).toBeDisabled()
@@ -272,6 +277,7 @@ describe('envio direto pela criação', () => {
     for (const text of [' 1234567890 ', 'a'.repeat(300)]) {
       fireEvent.change(observation, { target: { value: text } })
       expect(button).toBeEnabled()
+      expect(avarias.queryByText('Pendente para envio.')).not.toBeInTheDocument()
     }
     fireEvent.change(observation, { target: { value: '' } })
     expect(button).toBeDisabled()
