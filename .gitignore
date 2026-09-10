@@ -25,3 +25,5 @@ dist-ssr
 
 # Relatórios de cobertura
 coverage/
+.vercel
+.env*
