@@ -64,3 +64,19 @@ describe('estrutura inicial da aplicação', () => {
     expect(await screen.findByRole('heading', { name: 'Inspeção encontrada' })).toBeInTheDocument()
   })
 })
+
+it.each(['em_preenchimento', 'em_aprovacao', 'aprovada', 'reprovada'] as const)('consulta metadados, checklist e histórico em %s', async (status) => {
+  const original = createInspectionFixture()
+  original.status = status
+  original.historico.push({ id: 'reprovacao-anterior', tipo: 'reprovacao', dataHora: original.atualizadoEm, motivo: 'Pendência de integridade anterior.' })
+  await createInspectionStorage(localStorage).write([original])
+  renderApp(`/inspecoes/${original.id}`)
+  await screen.findByRole('heading', { name: 'Inspeção encontrada' })
+  expect(screen.getByText(`${original.protocolo} — ${original.titulo}`)).toBeInTheDocument()
+  expect(screen.getByText(original.setor)).toBeInTheDocument()
+  expect(screen.getByText(original.responsavel)).toBeInTheDocument()
+  expect(screen.getByText('09/09/2026')).toBeInTheDocument()
+  expect(screen.getByRole('heading', { name: 'Checklist' })).toBeInTheDocument()
+  expect(screen.getByRole('heading', { name: 'Histórico' })).toBeInTheDocument()
+  expect(screen.getByText('Motivo: Pendência de integridade anterior.')).toBeInTheDocument()
+})

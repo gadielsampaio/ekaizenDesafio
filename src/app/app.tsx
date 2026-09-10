@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useSyncExternalStore } from 'react'
 import { DataControls } from '@/features/recover-data/data-controls'
 import type { createOperationSimulation } from '@/shared/storage/operation-simulation'
 import { Link, Route, Routes, useLocation } from 'react-router-dom'
@@ -9,15 +9,20 @@ import { InspectionPlaceholder } from './inspection-placeholder'
 import { ListInspectionsPage } from '@/features/list-inspections/list-inspections-page'
 import { EditInspectionPage } from '@/features/edit-inspection/edit-inspection-page'
 
+const subscribeIdle = () => () => {}
+const isIdle = () => false
+
 export function App({ repository, dataControls }: {
   repository: InspectionRepository
   dataControls?: { simulation: ReturnType<typeof createOperationSimulation>; reset: () => Promise<void> }
 }) {
+  const resetting = useSyncExternalStore(dataControls?.simulation.subscribe ?? subscribeIdle, dataControls ? () => dataControls.simulation.getSnapshot().resetting : isIdle)
   const location = useLocation()
   const [revision, setRevision] = useState(0)
   return (
     <main className="mx-auto flex min-h-svh max-w-2xl flex-col justify-center gap-4 px-6 py-12">
       {dataControls && <DataControls {...dataControls} onRecovered={() => setRevision((value) => value + 1)} />}
+      <fieldset disabled={resetting} inert={resetting} className="contents" aria-label="Inspeções">
       <Routes key={revision}>
         <Route
           path="/"
@@ -38,6 +43,7 @@ export function App({ repository, dataControls }: {
           }
         />
       </Routes>
+      </fieldset>
     </main>
   )
 }

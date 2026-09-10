@@ -54,7 +54,7 @@ export function ListInspectionsPage({ repository }: { repository: Pick<Inspectio
       <p role="status">{cards.length === 0 ? 'Nenhuma inspeção encontrada.' : `${cards.length} inspeções encontradas.`}</p>
       <ul className="space-y-4">{cards.map((inspection) => <li key={inspection.id} className="min-w-0 space-y-2 rounded-lg border p-4">
         <p className="text-sm">{inspection.protocolo}</p>
-        <h2 className="break-words text-lg font-semibold"><Link className="underline focus-visible:outline-2 focus-visible:outline-ring" to={`/inspecoes/${encodeURIComponent(inspection.id)}${search}`}>{inspection.titulo}</Link></h2>
+        <h2 className="wrap-break-word text-lg font-semibold"><Link className="underline focus-visible:outline-2 focus-visible:outline-ring" to={`/inspecoes/${encodeURIComponent(inspection.id)}${search}`}>{inspection.titulo}</Link></h2>
         <p>{inspection.setor} · {inspection.responsavel}</p>
         <p>Data: <time dateTime={inspection.dataInspecao}>{inspection.dataInspecao.split('-').reverse().join('/')}</time></p>
         <p>Status: {{ em_preenchimento: 'Em preenchimento', em_aprovacao: 'Em aprovação', aprovada: 'Aprovada', reprovada: 'Reprovada' }[inspection.status]}</p>

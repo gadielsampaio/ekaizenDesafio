@@ -13,8 +13,10 @@ export function createLocalInspectionRepository(
   simulation = createOperationSimulation(),
 ): InspectionRepository & { reset(): Promise<void> } {
   let pending = Promise.resolve()
+  let resetting = false
 
-  function enqueueMutation<T>(action: () => Promise<T>) {
+  function enqueueMutation<T>(action: () => Promise<T>, isReset = false) {
+    if (resetting && !isReset) return Promise.reject(new Error('Aguarde a restauração dos dados terminar.'))
     const run = simulation.prepare()
     const operation = pending.then(() => run(action))
     pending = operation.then(() => undefined, () => undefined)
@@ -22,11 +24,19 @@ export function createLocalInspectionRepository(
   }
 
   return {
-    reset() {
-      return enqueueMutation(async () => {
-        await storage.reset(addMissingExamples([]))
-        simulation.recovered()
-      })
+    async reset() {
+      if (resetting) throw new Error('Aguarde a restauração dos dados terminar.')
+      resetting = true
+      simulation.setResetting(true)
+      try {
+        await enqueueMutation(async () => {
+          await storage.reset(addMissingExamples([]))
+          simulation.recovered()
+        }, true)
+      } finally {
+        resetting = false
+        simulation.setResetting(false)
+      }
     },
     list() {
       return enqueueMutation(async () => {

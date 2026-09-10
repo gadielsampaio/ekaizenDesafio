@@ -84,3 +84,28 @@ describe('simulação e recuperação', () => {
     expect(simulation.getSnapshot().delay).toBe(0)
   })
 })
+
+it.each([false, true])('bloqueia mutações durante reset e libera ao terminar (falha: %s)', async (fail) => {
+  vi.useFakeTimers()
+  const simulation = createOperationSimulation()
+  const storage = createInspectionStorage(localStorage)
+  const repository = createLocalInspectionRepository(storage, simulation)
+  await repository.list()
+  const before = await storage.read()
+  simulation.setDelay(1000)
+  if (fail) simulation.failNext()
+  const reset = repository.reset()
+  const finished = fail ? expect(reset).rejects.toThrow('Falha simulada') : expect(reset).resolves.toBeUndefined()
+  const original = createInspectionFixture()
+  const { titulo, setor, responsavel, dataInspecao, checklist } = original
+  const input = { titulo, setor, responsavel, dataInspecao, checklist }
+  const attempts = [repository.create(input), repository.saveDraft('exemplo-1', input), repository.submit('exemplo-1', input), repository.approve('exemplo-2'), repository.reject('exemplo-2', 'Pendência de integridade.'), repository.reopen('exemplo-4'), repository.reset()]
+  await Promise.all(attempts.map((attempt) => expect(attempt).rejects.toThrow('Aguarde a restauração')))
+  expect(simulation.getSnapshot().resetting).toBe(true)
+  await vi.advanceTimersByTimeAsync(1000)
+  await finished
+  expect(simulation.getSnapshot().resetting).toBe(false)
+  expect(await storage.read()).toEqual(before)
+  simulation.setDelay(0)
+  await expect(repository.approve('exemplo-2')).resolves.toMatchObject({ status: 'aprovada' })
+})

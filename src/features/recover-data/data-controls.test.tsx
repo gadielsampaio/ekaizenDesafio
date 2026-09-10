@@ -86,6 +86,30 @@ describe('controles de simulação e recuperação', () => {
     expect(localStorage.getItem(INSPECTION_STORAGE_KEY)).toBeNull()
   })
 
+  it('bloqueia formulário durante reset e preserva valores se a restauração falhar', async () => {
+    const { user, simulation, repository } = setup('/inspecoes/nova')
+    await user.type(screen.getByRole('textbox', { name: 'Título' }), 'Rascunho preservado')
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    const create = vi.spyOn(repository, 'create')
+    act(() => { simulation.setDelay(1000); simulation.failNext() })
+    vi.useFakeTimers()
+    try {
+      fireEvent.click(screen.getByRole('button', { name: 'Restaurar dados da aplicação' }))
+      expect(screen.getByRole('textbox', { name: 'Título' })).toBeDisabled()
+      expect(screen.getByRole('button', { name: 'Salvar inspeção' })).toBeDisabled()
+      expect(screen.getByRole('group', { name: 'Inspeções' })).toHaveAttribute('inert')
+      fireEvent.click(screen.getByRole('button', { name: 'Salvar inspeção' }))
+      expect(create).not.toHaveBeenCalled()
+      await act(async () => { await vi.advanceTimersByTimeAsync(1000) })
+      expect(screen.getByText(/Não foi possível restaurar os dados/)).toBeInTheDocument()
+      expect(screen.getByRole('textbox', { name: 'Título' })).toBeEnabled()
+      expect(screen.getByRole('textbox', { name: 'Título' })).toHaveValue('Rascunho preservado')
+      expect(screen.getByRole('group', { name: 'Inspeções' })).not.toHaveAttribute('inert')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('configura atraso e bloqueia reset repetido enquanto pendente', async () => {
     const { user, simulation } = setup()
     await screen.findByRole('button', { name: 'Todas (6)' })

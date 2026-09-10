@@ -11,7 +11,7 @@ type LoadState =
   | { status: 'error' }
   | { status: 'loaded'; inspection: Inspecao | null }
 
-// Confirma a persistência pela consulta; não é o slice de detalhe.
+// Consulta os dados confirmados e mantém o histórico visível em todos os estados.
 export function InspectionPlaceholder({ repository }: {
   repository: Pick<InspectionRepository, 'findById' | 'approve' | 'reject' | 'reopen'>
 }) {
@@ -49,7 +49,7 @@ export function InspectionPlaceholder({ repository }: {
         <>
           <p className="break-words">{state.inspection.protocolo} — {state.inspection.titulo}</p>
           <p aria-live="polite">Status: {{ em_preenchimento: 'Em preenchimento', em_aprovacao: 'Em aprovação', aprovada: 'Aprovada', reprovada: 'Reprovada' }[state.inspection.status]}</p>
-          {state.inspection.status !== 'em_preenchimento' && <ReviewInspectionPanel
+          {<ReviewInspectionPanel
             inspection={state.inspection} repository={repository}
             onReviewed={(inspection) => setState({ status: 'loaded', inspection })}
           />}

@@ -76,3 +76,29 @@ describe('listagem na interface', () => {
     expect(await screen.findByRole('button', { name: 'Todas (6)' })).toBeInTheDocument()
   })
 })
+
+it.each([
+  { title: 'Furadeira 02', search: 'fur', from: 'em_aprovacao', action: 'Reprovar', to: 'Reprovadas', old: 'Em aprovação' },
+  { title: 'Paleteira 04', search: 'pal', from: 'reprovada', action: 'Reabrir para correção', to: 'Em preenchimento', old: 'Reprovadas' },
+])('atualiza cards e contadores após $action', async ({ title, search, from, action, to, old }) => {
+  const { user } = setup(`/?busca=${search}&status=${from}`)
+  await user.click(await screen.findByRole('link', { name: title }))
+  await user.click(await screen.findByRole('button', { name: action }))
+  if (action === 'Reprovar') {
+    await user.type(screen.getByLabelText('Motivo da reprovação'), 'Pendência de integridade não resolvida.')
+    await user.click(screen.getByRole('button', { name: 'Confirmar reprovação' }))
+    await screen.findByText('Status: Reprovada')
+  } else {
+    await screen.findByText('Status: Em preenchimento')
+    expect(screen.getByText('Motivo: Pendência de integridade do equipamento não resolvida.')).toBeInTheDocument()
+    expect(screen.getByText(/Reabertura ·/)).toBeInTheDocument()
+    expect(screen.getByText('Observação: Avaria aparente na carenagem.')).toBeInTheDocument()
+  }
+  await user.click(screen.getByRole('link', { name: 'Voltar ao início' }))
+  expect(await screen.findByText('Nenhuma inspeção encontrada.')).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: `${old} (0)` })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Todas (1)' })).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: `${to} (1)` }))
+  await user.click(screen.getByRole('link', { name: title }))
+  expect(await screen.findByText(/Motivo: Pendência de integridade/)).toBeInTheDocument()
+})

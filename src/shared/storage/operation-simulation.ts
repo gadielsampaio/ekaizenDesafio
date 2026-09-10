@@ -1,9 +1,9 @@
 import { InvalidInspectionStorageError } from './inspection-storage'
 
-type Snapshot = { delay: number; failNext: boolean; pending: number; invalidStorage: boolean }
+type Snapshot = { delay: number; failNext: boolean; pending: number; invalidStorage: boolean; resetting: boolean }
 
 export function createOperationSimulation() {
-  let snapshot: Snapshot = { delay: 0, failNext: false, pending: 0, invalidStorage: false }
+  let snapshot: Snapshot = { delay: 0, failNext: false, pending: 0, invalidStorage: false, resetting: false }
   const listeners = new Set<() => void>()
   function update(changes: Partial<Snapshot>) {
     snapshot = { ...snapshot, ...changes }
@@ -20,6 +20,7 @@ export function createOperationSimulation() {
       update({ delay })
     },
     failNext() { update({ failNext: true }) },
+    setResetting(resetting: boolean) { update({ resetting }) },
     recovered() { update({ invalidStorage: false }) },
     // Captura a configuração ao chamar a operação, mesmo se ela entrar na fila.
     prepare() {
