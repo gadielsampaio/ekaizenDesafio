@@ -126,7 +126,7 @@ export function ReviewInspectionPanel({ inspection, repository, onReviewed, chil
                     className="field-control py-3"
                   />
                   <p id="motivo-help" className="text-sm text-muted-foreground">De 10 a 300 caracteres, sem contar espaços nas pontas.</p>
-                  {invalid && <p id="motivo-error" className="notice border-red-200 bg-red-50 text-red-900">Informe um motivo com 10 a 300 caracteres após remover os espaços nas pontas.</p>}
+                  {invalid && <p id="motivo-error" className="notice border-red-200 bg-red-50 text-red-900">Informe um motivo conforme a regra.</p>}
                   {failureMessage}
                   {pending === 'reject' && <p role="status">Reprovando inspeção…</p>}
                   <div className="flex flex-col-reverse gap-3 pt-3 sm:flex-row sm:justify-end">

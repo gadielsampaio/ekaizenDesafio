@@ -12,7 +12,7 @@ export interface InspectionFormValues {
 export type InspectionFormErrors = Record<string, string>
 
 const metadataMessages: Record<string, string> = {
-  titulo: 'Informe um título com 3 a 80 caracteres, sem contar espaços nas pontas.',
+  titulo: 'Informe um título válido.',
   setor: 'Selecione um setor válido.',
   responsavel: 'Selecione um responsável válido.',
   dataInspecao: 'Informe uma data válida de calendário.',

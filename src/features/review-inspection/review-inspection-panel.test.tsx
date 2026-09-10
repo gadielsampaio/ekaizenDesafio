@@ -51,7 +51,7 @@ describe('revisão pela interface', () => {
       if (invalid) await user.type(reason, invalid)
       await user.click(screen.getByRole('button', { name: 'Confirmar reprovação' }))
       expect(reason).toHaveAttribute('aria-invalid', 'true')
-      expect(reason).toHaveAccessibleDescription(/10 a 300/)
+      expect(reason).toHaveAccessibleDescription(/conforme a regra/)
     }
     expect(reject).not.toHaveBeenCalled()
     await user.clear(reason)

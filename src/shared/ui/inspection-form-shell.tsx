@@ -13,6 +13,6 @@ export function InspectionFormShell({ title, description, children }: {
       <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">{title}</h1>
       <p className="text-sm text-muted-foreground">{description}</p>
     </header>
-    <div className="w-full max-w-3xl">{children}</div>
+    <div className="w-full">{children}</div>
   </>
 }
