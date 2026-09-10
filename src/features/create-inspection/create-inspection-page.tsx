@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { useBeforeUnload, useBlocker, useNavigate } from 'react-router-dom'
+import { useBlocker, useNavigate } from 'react-router-dom'
 import type { InspectionRepository } from '@/shared/contracts/inspection-repository'
 import { criarChecklistVazio } from '@/shared/domain/checklist'
 import { checklistIdSchema } from '@/shared/domain/inspection-schemas'
@@ -7,6 +7,7 @@ import { Button } from '@/shared/ui/button'
 import { InspectionFormShell } from '@/shared/ui/inspection-form-shell'
 import { InspectionFields } from '@/shared/ui/inspection-fields'
 import { Spinner } from '@/shared/ui/spinner'
+import { ConfirmationDialog } from '@/shared/ui/confirmation-dialog'
 import { getInspectionFormErrors, type InspectionFormValues, type InspectionFormErrors } from '@/shared/lib/inspection-form'
 import { submitInspectionSchema } from '@/features/edit-inspection/edit-inspection-schema'
 import { createInspectionSchema } from './create-inspection-schema'
@@ -30,6 +31,7 @@ export function CreateInspectionPage({ repository }: {
   const processing = useRef(false)
   const saved = useRef(false)
   const formRef = useRef<HTMLFormElement>(null)
+  const navigationOrigin = useRef<HTMLElement | null>(null)
   const hasChanges = fieldNames.some((field) => values[field] !== initialValues[field])
     || checklistIdSchema.options.some((id) => {
       const item = values.checklist[id]
@@ -37,17 +39,10 @@ export function CreateInspectionPage({ repository }: {
     })
   const blocker = useBlocker(() => !saved.current && (hasChanges || processing.current))
 
-  useBeforeUnload((event) => {
-    if (!saved.current && (hasChanges || processing.current)) event.preventDefault()
-  })
-
   useEffect(() => {
     if (blocker.state !== 'blocked') return
-    if (!processing.current && window.confirm('Descartar os dados não salvos desta inspeção?')) {
-      blocker.proceed()
-    } else {
-      blocker.reset()
-    }
+    if (processing.current) blocker.reset()
+    else if (document.activeElement instanceof HTMLElement) navigationOrigin.current = document.activeElement
   }, [blocker])
 
   useEffect(() => {
@@ -102,6 +97,16 @@ export function CreateInspectionPage({ repository }: {
         </div>
         {isSaving && <p role="status" className="text-sm text-muted-foreground">{pending === 'submit' ? 'Enviando para aprovação…' : 'Salvando inspeção…'}</p>}
       </form>
+      <ConfirmationDialog
+        open={blocker.state === 'blocked' && !isSaving}
+        title="Descartar inspeção?"
+        description="Os dados não salvos desta inspeção serão perdidos."
+        confirmLabel="Descartar alterações"
+        cancelLabel="Continuar editando"
+        onCancel={() => { if (blocker.state === 'blocked') blocker.reset() }}
+        onConfirm={() => { if (blocker.state === 'blocked') blocker.proceed() }}
+        returnFocus={() => navigationOrigin.current?.focus()}
+      />
     </InspectionFormShell>
   )
 }

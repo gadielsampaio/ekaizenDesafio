@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
@@ -192,22 +192,21 @@ it.each(['Escape', 'clique externo'] as const)('confirma descarte por %s, preser
   expect(screen.getByLabelText('Motivo da reprovação')).toHaveValue('')
 })
 
-it('mantém a proteção de navegação e recarga com motivo não salvo', async () => {
+it('mantém a proteção de navegação interna com motivo não salvo', async () => {
   const { user, router } = await setup()
-  const cleanUnload = new Event('beforeunload', { cancelable: true })
-  fireEvent(window, cleanUnload)
-  expect(cleanUnload.defaultPrevented).toBe(false)
   await user.click(screen.getByRole('button', { name: 'Reprovar' }))
-  await user.type(screen.getByLabelText('Motivo da reprovação'), 'Motivo ainda não salvo.')
-  const dirtyUnload = new Event('beforeunload', { cancelable: true })
-  fireEvent(window, dirtyUnload)
-  expect(dirtyUnload.defaultPrevented).toBe(true)
-  const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
+  const reason = screen.getByLabelText('Motivo da reprovação')
+  await user.type(reason, 'Motivo ainda não salvo.')
   await act(async () => { await router.navigate('/') })
-  expect(confirm).toHaveBeenCalledWith('Descartar o motivo de reprovação não salvo?')
-  expect(screen.getByLabelText('Motivo da reprovação')).toHaveValue('Motivo ainda não salvo.')
-  confirm.mockReturnValue(true)
+  const firstDialog = screen.getByRole('alertdialog', { name: 'Descartar motivo da reprovação?' })
+  const keep = within(firstDialog).getByRole('button', { name: 'Continuar escrevendo' })
+  expect(keep).toHaveFocus()
+  await user.keyboard('{Escape}')
+  expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+  expect(reason).toHaveValue('Motivo ainda não salvo.')
+  await waitFor(() => expect(reason).toHaveFocus())
   await act(async () => { await router.navigate('/') })
+  await user.click(within(screen.getByRole('alertdialog', { name: 'Descartar motivo da reprovação?' })).getByRole('button', { name: 'Descartar motivo' }))
   expect(await screen.findByRole('heading', { name: 'Inspeções' })).toBeInTheDocument()
 })
 

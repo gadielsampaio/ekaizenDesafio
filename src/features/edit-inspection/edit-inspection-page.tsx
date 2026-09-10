@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, useLocation, useBeforeUnload, useBlocker, useNavigate, useParams } from 'react-router-dom'
+import { Link, useLocation, useBlocker, useNavigate, useParams } from 'react-router-dom'
 import type { InspectionRepository } from '@/shared/contracts/inspection-repository'
 import type { Inspecao } from '@/shared/domain/inspection'
 import { getInspectionFormErrors, type InspectionFormErrors, type InspectionFormValues } from '@/shared/lib/inspection-form'
@@ -8,6 +8,7 @@ import { InspectionFormShell } from '@/shared/ui/inspection-form-shell'
 import { BackToInspections } from '@/shared/ui/back-to-inspections'
 import { InspectionFields } from '@/shared/ui/inspection-fields'
 import { Spinner } from '@/shared/ui/spinner'
+import { ConfirmationDialog } from '@/shared/ui/confirmation-dialog'
 import { saveDraftSchema, submitInspectionSchema } from './edit-inspection-schema'
 
 type Repository = Pick<InspectionRepository, 'findById' | 'saveDraft' | 'submit'>
@@ -63,17 +64,15 @@ function EditInspectionForm({ inspection, repository }: { inspection: Inspecao; 
   const processing = useRef(false)
   const submitted = useRef(false)
   const formRef = useRef<HTMLFormElement>(null)
+  const navigationOrigin = useRef<HTMLElement | null>(null)
   const dirty = JSON.stringify(values) !== JSON.stringify(editableFields(confirmed))
   const canSubmit = submitInspectionSchema.safeParse(values).success
   const blocker = useBlocker(() => !submitted.current && (dirty || processing.current))
 
-  useBeforeUnload((event) => {
-    if (!submitted.current && (dirty || processing.current)) event.preventDefault()
-  })
   useEffect(() => {
     if (blocker.state !== 'blocked') return
-    if (!processing.current && window.confirm('Descartar as alterações não salvas desta inspeção?')) blocker.proceed()
-    else blocker.reset()
+    if (processing.current) blocker.reset()
+    else if (document.activeElement instanceof HTMLElement) navigationOrigin.current = document.activeElement
   }, [blocker])
   useEffect(() => {
     formRef.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus()
@@ -131,5 +130,15 @@ function EditInspectionForm({ inspection, repository }: { inspection: Inspecao; 
         <Button type="button" variant="ghost" disabled={pending !== null} onClick={() => navigate(`/inspecoes/${encodeURIComponent(inspection.id)}${search}`)}>Cancelar</Button>
       </div>
     </form>
+    <ConfirmationDialog
+      open={blocker.state === 'blocked' && pending === null}
+      title="Descartar alterações?"
+      description="As alterações não salvas desta inspeção serão perdidas."
+      confirmLabel="Descartar alterações"
+      cancelLabel="Continuar editando"
+      onCancel={() => { if (blocker.state === 'blocked') blocker.reset() }}
+      onConfirm={() => { if (blocker.state === 'blocked') blocker.proceed() }}
+      returnFocus={() => navigationOrigin.current?.focus()}
+    />
   </InspectionFormShell>
 }

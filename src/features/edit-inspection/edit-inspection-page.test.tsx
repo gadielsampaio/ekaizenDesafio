@@ -1,4 +1,4 @@
-import { act, render, screen, within } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
@@ -153,12 +153,16 @@ describe('edição e envio pela interface', () => {
   it('confirma descarte e mantém alterações quando o usuário recusa', async () => {
     const { original, repository, router, user } = await setup()
     await user.type(screen.getByLabelText('Título'), ' alterada')
-    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
-    await user.click(screen.getByRole('button', { name: 'Cancelar' }))
-    expect(confirm).toHaveBeenCalledTimes(1)
+    const cancel = screen.getByRole('button', { name: 'Cancelar' })
+    await user.click(cancel)
+    const dialog = screen.getByRole('alertdialog', { name: 'Descartar alterações?' })
+    const keep = within(dialog).getByRole('button', { name: 'Continuar editando' })
+    expect(keep).toHaveFocus()
+    await user.click(keep)
+    await waitFor(() => expect(cancel).toHaveFocus())
     expect(screen.getByLabelText('Título')).toHaveValue(`${original.titulo} alterada`)
-    confirm.mockReturnValue(true)
-    await user.click(screen.getByRole('button', { name: 'Cancelar' }))
+    await user.click(cancel)
+    await user.click(within(screen.getByRole('alertdialog', { name: 'Descartar alterações?' })).getByRole('button', { name: 'Descartar alterações' }))
     expect(router.state.location.pathname).toBe(`/inspecoes/${original.id}`)
     await expect(repository.findById(original.id)).resolves.toEqual(original)
   })

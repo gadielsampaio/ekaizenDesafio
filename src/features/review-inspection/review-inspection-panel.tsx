@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { useBeforeUnload, useBlocker } from 'react-router-dom'
+import { useBlocker } from 'react-router-dom'
 import type { InspectionRepository } from '@/shared/contracts/inspection-repository'
 import type { Inspecao } from '@/shared/domain/inspection'
 import { CHECKLIST_PERGUNTAS } from '@/shared/domain/checklist'
@@ -7,6 +7,7 @@ import { checklistIdSchema, motivoReprovacaoSchema } from '@/shared/domain/inspe
 import { Button } from '@/shared/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogTitle, DialogTrigger } from '@/shared/ui/dialog'
 import { Spinner } from '@/shared/ui/spinner'
+import { ConfirmationDialog } from '@/shared/ui/confirmation-dialog'
 import { DiscardReasonDialog } from './discard-reason-dialog'
 
 const eventLabels = { criacao: 'Criação', envio: 'Envio', aprovacao: 'Aprovação', reprovacao: 'Reprovação', reabertura: 'Reabertura' }
@@ -27,17 +28,15 @@ export function ReviewInspectionPanel({ inspection, repository, onReviewed, chil
   const reasonRef = useRef<HTMLTextAreaElement>(null)
   const rejectButtonRef = useRef<HTMLButtonElement>(null)
   const panelRef = useRef<HTMLElement>(null)
+  const navigationOrigin = useRef<HTMLElement | null>(null)
   const [discarding, setDiscarding] = useState(false)
   const dirty = rejecting && motivo !== ''
   const blocker = useBlocker(() => !decided.current && (dirty || processing.current))
 
-  useBeforeUnload((event) => {
-    if (!decided.current && (dirty || processing.current)) event.preventDefault()
-  })
   useEffect(() => {
     if (blocker.state !== 'blocked') return
-    if (!processing.current && window.confirm('Descartar o motivo de reprovação não salvo?')) blocker.proceed()
-    else blocker.reset()
+    if (processing.current) blocker.reset()
+    else if (document.activeElement instanceof HTMLElement) navigationOrigin.current = document.activeElement
   }, [blocker])
 
   function closeRejection() {
@@ -150,6 +149,16 @@ export function ReviewInspectionPanel({ inspection, repository, onReviewed, chil
           </li>)}
         </ol>
       </div>
+      <ConfirmationDialog
+        open={blocker.state === 'blocked' && pending === null}
+        title="Descartar motivo da reprovação?"
+        description="O motivo ainda não foi salvo e será perdido ao sair desta inspeção."
+        confirmLabel="Descartar motivo"
+        cancelLabel="Continuar escrevendo"
+        onCancel={() => { if (blocker.state === 'blocked') blocker.reset() }}
+        onConfirm={() => { if (blocker.state === 'blocked') blocker.proceed() }}
+        returnFocus={() => navigationOrigin.current?.focus()}
+      />
     </section>
   )
 }

@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
@@ -11,9 +11,10 @@ import { INSPECTION_STORAGE_KEY } from '@/shared/storage/inspection-storage-sche
 function setup(path = '/') {
   const simulation = createOperationSimulation()
   const repository = createLocalInspectionRepository(createInspectionStorage(localStorage), simulation)
-  const router = createMemoryRouter([{ path: '*', element: <App repository={repository} dataControls={{ simulation, reset: repository.reset }} /> }], { initialEntries: [path] })
+  const reset = vi.spyOn(repository, 'reset')
+  const router = createMemoryRouter([{ path: '*', element: <App repository={repository} dataControls={{ simulation, reset }} /> }], { initialEntries: [path] })
   render(<RouterProvider router={router} />)
-  return { simulation, repository, user: userEvent.setup() }
+  return { simulation, repository, reset, user: userEvent.setup() }
 }
 
 describe('controles de simulação e recuperação', () => {
@@ -22,12 +23,20 @@ describe('controles de simulação e recuperação', () => {
     localStorage.setItem('outro-app', 'preservado')
     const { user } = setup()
     expect(await screen.findByText(/O armazenamento da aplicação está inválido/)).toBeInTheDocument()
-    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
-    await user.click(screen.getByRole('button', { name: 'Restaurar dados da aplicação' }))
+    const trigger = screen.getByRole('button', { name: 'Restaurar dados da aplicação' })
+    await user.click(trigger)
+    const dialog = screen.getByRole('alertdialog', { name: 'Restaurar os seis exemplos?' })
+    const keep = within(dialog).getByRole('button', { name: 'Manter dados' })
+    expect(keep).toHaveFocus()
+    await user.tab({ shift: true })
+    expect(within(dialog).getByRole('button', { name: 'Restaurar dados' })).toHaveFocus()
+    await user.keyboard('{Escape}')
+    await waitFor(() => expect(trigger).toHaveFocus())
     expect(localStorage.getItem(INSPECTION_STORAGE_KEY)).toBe('{')
-    confirm.mockReturnValue(true)
-    await user.click(screen.getByRole('button', { name: 'Restaurar dados da aplicação' }))
+    await user.click(trigger)
+    await user.click(within(screen.getByRole('alertdialog', { name: 'Restaurar os seis exemplos?' })).getByRole('button', { name: 'Restaurar dados' }))
     expect(await screen.findByRole('button', { name: 'Todas (6)' })).toBeInTheDocument()
+    await waitFor(() => expect(trigger).toHaveFocus())
     expect(screen.queryByText(/O armazenamento da aplicação está inválido/)).not.toBeInTheDocument()
     expect(localStorage.getItem('outro-app')).toBe('preservado')
   })
@@ -36,13 +45,14 @@ describe('controles de simulação e recuperação', () => {
     localStorage.setItem(INSPECTION_STORAGE_KEY, '{')
     const { user } = setup()
     await screen.findByText(/O armazenamento da aplicação está inválido/)
-    vi.spyOn(window, 'confirm').mockReturnValue(true)
     await user.click(screen.getByText('Simulação de operações'))
     await user.click(screen.getByRole('button', { name: 'Falhar próxima operação' }))
     await user.click(screen.getByRole('button', { name: 'Restaurar dados da aplicação' }))
+    await user.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Restaurar dados' }))
     expect(await screen.findByText(/Não foi possível restaurar os dados/)).toBeInTheDocument()
     expect(localStorage.getItem(INSPECTION_STORAGE_KEY)).toBe('{')
     await user.click(screen.getByRole('button', { name: 'Restaurar dados da aplicação' }))
+    await user.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Restaurar dados' }))
     expect(await screen.findByRole('button', { name: 'Todas (6)' })).toBeInTheDocument()
   })
 
@@ -90,12 +100,12 @@ describe('controles de simulação e recuperação', () => {
   it('bloqueia formulário durante reset e preserva valores se a restauração falhar', async () => {
     const { user, simulation, repository } = setup('/inspecoes/nova')
     await user.type(screen.getByRole('textbox', { name: 'Título' }), 'Rascunho preservado')
-    vi.spyOn(window, 'confirm').mockReturnValue(true)
     const create = vi.spyOn(repository, 'create')
     act(() => { simulation.setDelay(1000); simulation.failNext() })
     vi.useFakeTimers()
     try {
       fireEvent.click(screen.getByRole('button', { name: 'Restaurar dados da aplicação' }))
+      fireEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Restaurar dados' }))
       expect(screen.getByRole('textbox', { name: 'Título' })).toBeDisabled()
       expect(screen.getByRole('button', { name: 'Salvar rascunho' })).toBeDisabled()
       expect(screen.getByRole('group', { name: 'Inspeções' })).toHaveAttribute('inert')
@@ -112,18 +122,18 @@ describe('controles de simulação e recuperação', () => {
   })
 
   it('configura atraso e bloqueia reset repetido enquanto pendente', async () => {
-    const { user, simulation } = setup()
+    const { user, simulation, reset } = setup()
     await screen.findByRole('button', { name: 'Todas (6)' })
     await user.click(screen.getByText('Simulação de operações'))
     await user.selectOptions(screen.getByRole('combobox', { name: 'Atraso por operação' }), '1000')
     expect(simulation.getSnapshot().delay).toBe(1000)
-    vi.spyOn(window, 'confirm').mockReturnValue(true)
     vi.useFakeTimers()
     try {
       const button = screen.getByRole('button', { name: 'Restaurar dados da aplicação' })
       fireEvent.click(button)
+      fireEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Restaurar dados' }))
       fireEvent.click(button)
-      expect(window.confirm).toHaveBeenCalledTimes(1)
+      expect(reset).toHaveBeenCalledTimes(1)
       const resetting = screen.getByRole('button', { name: 'Restaurando...' })
       expect(resetting).toBeDisabled()
       expect(resetting.querySelector('[data-slot="spinner"]')).toBeInTheDocument()

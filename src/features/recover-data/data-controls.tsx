@@ -1,6 +1,7 @@
-import { useRef, useState, useSyncExternalStore } from 'react'
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { Button } from '@/shared/ui/button'
 import { Spinner } from '@/shared/ui/spinner'
+import { ConfirmationDialog } from '@/shared/ui/confirmation-dialog'
 import type { createOperationSimulation } from '@/shared/storage/operation-simulation'
 
 export function DataControls({ simulation, reset, onRecovered }: {
@@ -11,10 +12,22 @@ export function DataControls({ simulation, reset, onRecovered }: {
   const state = useSyncExternalStore(simulation.subscribe, simulation.getSnapshot)
   const [failed, setFailed] = useState(false)
   const [resetting, setResetting] = useState(false)
+  const [confirmingReset, setConfirmingReset] = useState(false)
   const processing = useRef(false)
+  const resetButtonRef = useRef<HTMLButtonElement>(null)
+  const restoreFocusAfterReset = useRef(false)
+
+  useEffect(() => {
+    if (!resetting && restoreFocusAfterReset.current) {
+      restoreFocusAfterReset.current = false
+      resetButtonRef.current?.focus()
+    }
+  }, [resetting])
+
   async function recover() {
     if (processing.current || state.pending > 0) return
-    if (!window.confirm('Restaurar os seis exemplos? Todos os dados e alterações desta aplicação, inclusive campos não salvos, serão descartados. Dados de outros sites não serão alterados.')) return
+    setConfirmingReset(false)
+    restoreFocusAfterReset.current = true
     processing.current = true
     setResetting(true)
     setFailed(false)
@@ -47,7 +60,18 @@ export function DataControls({ simulation, reset, onRecovered }: {
     {resetting && <p role="status">Restaurando dados…</p>}
     <div className="flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
       <p className="text-xs text-muted-foreground">Restaure os exemplos iniciais mediante confirmação.</p>
-      <Button className="whitespace-normal" variant="outline" disabled={state.pending > 0 || resetting} onClick={() => { void recover() }}>{resetting && <Spinner />}{resetting ? 'Restaurando...' : 'Restaurar dados da aplicação'}</Button>
+      <Button ref={resetButtonRef} className="whitespace-normal" variant="outline" disabled={state.pending > 0 || resetting} onClick={() => setConfirmingReset(true)}>{resetting && <Spinner />}{resetting ? 'Restaurando...' : 'Restaurar dados da aplicação'}</Button>
     </div>
+    <ConfirmationDialog
+      open={confirmingReset}
+      title="Restaurar os seis exemplos?"
+      description="Todos os dados e alterações desta aplicação, inclusive campos não salvos, serão descartados. Dados de outros sites não serão alterados."
+      confirmLabel="Restaurar dados"
+      cancelLabel="Manter dados"
+      disabled={resetting}
+      onCancel={() => setConfirmingReset(false)}
+      onConfirm={() => { void recover() }}
+      returnFocus={() => resetButtonRef.current?.focus()}
+    />
   </aside>
 }
