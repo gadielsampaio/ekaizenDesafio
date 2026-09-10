@@ -49,22 +49,42 @@ export function ListInspectionsPage({ repository }: { repository: Pick<Inspectio
       </div>
       <Button asChild className="h-12 gap-2 self-start rounded-lg sm:self-end"><Link to="/inspecoes/nova"><span aria-hidden="true" className="text-lg font-normal">＋</span>Nova inspeção</Link></Button>
     </header>
-    <div className="space-y-5">
-      {state.status === 'loaded' && <div className="flex min-w-0 flex-wrap gap-1 rounded-xl border bg-neutral-100 p-1" role="group" aria-label="Filtrar por status">
-        {counts.map(({ value, label, count }) => <Button key={value} className={`min-h-11 gap-2 rounded-lg px-3 sm:px-4 ${filters.status === value ? 'bg-white text-foreground hover:bg-white' : 'text-muted-foreground hover:bg-neutral-200/60 hover:text-foreground'}`} variant="ghost" aria-pressed={filters.status === value} onClick={() => update('status', value)}>
-          {label} <span className="text-xs font-normal tabular-nums text-muted-foreground">({count})</span>
-        </Button>)}
-      </div>}
-      <div className="grid items-end gap-3 sm:grid-cols-[minmax(0,1fr)_15rem_auto]">
-        <label className="block min-w-0 text-sm font-medium"><span className="sr-only">Buscar por protocolo ou título</span>
-          <input className={control} type="search" placeholder="Buscar por protocolo ou título" value={filters.busca} onChange={(event) => update('busca', event.target.value)} />
-        </label>
-        <label className="block min-w-0 text-sm font-medium"><span className="sr-only">Setor</span>
-          <select className={control} value={filters.setor} onChange={(event) => update('setor', event.target.value)}><option value="">Todos os setores</option>{setorSchema.options.map((value) => <option key={value}>{value}</option>)}</select>
-        </label>
-        {filtered && <Button className="h-11 justify-self-start" variant="ghost" onClick={() => setParams({})}>Limpar</Button>}
+<div className="space-y-5">
+  {state.status === 'loaded' && (
+    <div className="rounded-xl border bg-neutral-100 p-1">
+      <div
+        className="flex w-full flex-nowrap overflow-x-auto sm:flex-wrap sm:overflow-visible gap-1 [-ms-overflow-style:none] scrollbar-none [&::-webkit-scrollbar]:hidden [mask-image:linear-gradient(to_right,black_92%,transparent_100%)] sm:mask-none after:content-[''] after:w-2 after:shrink-0 sm:after:hidden"
+        role="group"
+        aria-label="Filtrar por status"
+      >
+        {counts.map(({ value, label, count }) => (
+          <Button
+            key={value}
+            className={`shrink-0 sm:shrink min-h-11 gap-2 rounded-lg px-3 sm:px-4 ${
+              filters.status === value
+                ? 'bg-white text-foreground shadow-sm hover:bg-white'
+                : 'text-muted-foreground hover:bg-neutral-200/60 hover:text-foreground'
+            }`}
+            variant="ghost"
+            aria-pressed={filters.status === value}
+            onClick={() => update('status', value)}
+          >
+            {label} <span className="text-xs font-normal tabular-nums text-muted-foreground">({count})</span>
+          </Button>
+        ))}
       </div>
     </div>
+  )}
+  <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+    <label className="block min-w-0 flex-1 text-sm font-medium"><span className="sr-only">Buscar por protocolo ou título</span>
+      <input className={control} type="search" placeholder="Buscar por protocolo ou título" value={filters.busca} onChange={(event) => update('busca', event.target.value)} />
+    </label>
+    <label className="block min-w-0 w-full shrink-0 text-sm font-medium sm:w-60"><span className="sr-only">Setor</span>
+      <select className={control} value={filters.setor} onChange={(event) => update('setor', event.target.value)}><option value="">Todos os setores</option>{setorSchema.options.map((value) => <option key={value}>{value}</option>)}</select>
+    </label>
+    {filtered && <Button className="h-11 w-full shrink-0 sm:w-auto" variant="ghost" onClick={() => setParams({})}>Limpar</Button>}
+  </div>
+</div>
     {state.status === 'loading' && <InspectionListSkeleton />}
     {state.status === 'error' && <div className="space-y-4 rounded-lg border bg-card p-6"><p role="alert">Não foi possível listar as inspeções.</p><Button variant="outline" onClick={() => { setState({ status: 'loading' }); setAttempt((value) => value + 1) }}>Tentar novamente</Button></div>}
     {state.status === 'loaded' && <>
